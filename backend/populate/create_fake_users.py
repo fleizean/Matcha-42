@@ -175,10 +175,10 @@ async def create_fake_users_with_existing_pictures(count=50):
                 
                 first_name_safe = remove_turkish_chars(first_name)
                 
-                username = f"{first_name_safe.lower()}_{fake.random_number(digits=4)}"
+                username = f"{first_name_safe.lower()}{fake.random_number(digits=4)}"
                 email = f"{username}@{fake.domain_name()}"
                 password = "password123"  # Same password for all test users
-                
+                print("Creating user: ", username)
                 # Create user
                 user_id = str(uuid.uuid4())
                 now = datetime.utcnow()
@@ -374,6 +374,6 @@ if __name__ == "__main__":
     import asyncio
     
     # Choose which function to run based on your needs
-    asyncio.run(create_fake_users_with_existing_pictures(200))
+    asyncio.run(create_fake_users_with_existing_pictures(3))
     # or
     # asyncio.run(create_fake_users_with_ai_pictures(200))

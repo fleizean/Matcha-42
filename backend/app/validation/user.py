@@ -3,41 +3,41 @@ from unidecode import unidecode
 
 def validate_username(username):
     if not username:
-        return False, "Username is required"
+        return False, "Kullanıcı adı gereklidir"
     
     if len(username) < 3 or len(username) > 30:
-        return False, "Username must be between 3 and 30 characters"
+        return False, "Kullanıcı adı 3 ile 30 karakter arasında olmalıdır"
     
     # Convert Turkish characters to ASCII equivalents
     normalized = unidecode(username)
     
     # Check if contains only allowed characters
     if not normalized.isalnum():
-        return False, "Username can only contain letters and numbers"
+        return False, "Kullanıcı adı sadece harf ve rakamlardan oluşabilir"
     
     # Check if original had Turkish characters
     if username != normalized:
-        return False, "Username cannot contain Turkish characters (ğ,ü,ş,i,ö,ç)"
+        return False, "Kullanıcı adı türkçe karakter içeremez (ü,ğ,ş,ı,ö,ç)"
     
     return True, ""
 
 def validate_email(email):
     if not email:
-        return False, "Email is required"
+        return False, "Mail adresi gereklidir"
     
     # Simple email validation regex
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(pattern, email):
-        return False, "Invalid email format"
+        return False, "Mail adresi geçersiz"
     
     return True, ""
 
 def validate_password(password):
     if not password:
-        return False, "Password is required"
+        return False, "Şifre gereklidir"
     
     if len(password) < 8:
-        return False, "Password must be at least 8 characters"
+        return False, "Şifre en az 8 karakter olmalıdır"
     
     # Check complexity
     has_upper = any(char.isupper() for char in password)
@@ -47,7 +47,7 @@ def validate_password(password):
     
     complexity_score = sum([has_upper, has_lower, has_digit, has_special])
     if complexity_score < 3:
-        return False, "Password must contain at least 3 of the following: uppercase letters, lowercase letters, numbers, special characters"
+        return False, "Şifre yeterince karmaşık değil"
     
     # Check against common passwords
     common_passwords = [
@@ -56,16 +56,16 @@ def validate_password(password):
     ]
     
     if password.lower() in common_passwords:
-        return False, "Password is too common"
+        return False, "Şifre çok yaygın bir şifre, lütfen daha güçlü bir şifre seçin"
     
     return True, ""
 
 def validate_name(name, field_name="Name"):
     if not name:
-        return False, f"{field_name} is required"
+        return False, f"{field_name} şifre gereklidir"
     
     if len(name) < 1 or len(name) > 50:
-        return False, f"{field_name} must be between 1 and 50 characters"
+        return False, f"{field_name} 1 ile 50 karakter arasında olmalıdır"
     
     return True, ""
 

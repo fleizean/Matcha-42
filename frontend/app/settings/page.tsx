@@ -734,75 +734,103 @@ const SettingsPage = () => {
 
 
 
-  const handleProfileUpdate = async () => {
-    try {
-      // Update user data first
-      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session?.user?.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: profileInfo.firstName,
-          last_name: profileInfo.lastName,
-          username: profileInfo.username,
-          email: profileInfo.email,
-        })
-      });
-
-      if (!userResponse.ok) {
-        const userError = await userResponse.json();
-        if (userError.detail && Array.isArray(userError.detail)) {
-          throw new Error(userError.detail[0].msg);
+    const handleProfileUpdate = async () => {
+      try {
+        // Update user data first
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session?.user?.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            first_name: profileInfo.firstName,
+            last_name: profileInfo.lastName,
+            username: profileInfo.username,
+            email: profileInfo.email,
+          })
+        });
+  
+        if (!userResponse.ok) {
+          const userError = await userResponse.json();
+          if (userError.detail) {
+            // Handle nested object error format like {"detail":{"username":"Username can only contain letters and numbers"}}
+            if (typeof userError.detail === 'object' && !Array.isArray(userError.detail)) {
+              const errorMessage = Object.entries(userError.detail)
+                .map(([field, message]) => `${message}`)
+                .join(', ');
+              throw new Error(errorMessage);
+            }
+            // Handle array format
+            else if (Array.isArray(userError.detail)) {
+              throw new Error(userError.detail[0].msg);
+            }
+            // Handle string format
+            else {
+              throw new Error(userError.detail);
+            }
+          }
+          throw new Error('Kullanıcı bilgileri güncellenemedi');
         }
-        throw new Error(userError.detail || 'Kullanıcı bilgileri güncellenemedi');
-      }
-
-      // Format birth_date to ISO string
-      let formattedBirthDate = null;
-      if (profileInfo.birthDate) {
-        const date = new Date(profileInfo.birthDate);
-        formattedBirthDate = new Date(Date.UTC(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          0, 0, 0
-        )).toISOString();
-      }
-
-      // Then update profile data
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session?.user?.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gender: profileInfo.gender,
-          sexual_preference: profileInfo.preference,
-          biography: profileInfo.biography,
-          latitude: profileInfo.latitude,
-          longitude: profileInfo.longitude,
-          birth_date: formattedBirthDate
-        })
-      });
-
-      if (!profileResponse.ok) {
-        const profileError = await profileResponse.json();
-        if (profileError.detail && Array.isArray(profileError.detail)) {
-          throw new Error(profileError.detail[0].msg);
+  
+        // Format birth_date to ISO string
+        let formattedBirthDate = null;
+        if (profileInfo.birthDate) {
+          const date = new Date(profileInfo.birthDate);
+          formattedBirthDate = new Date(Date.UTC(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            0, 0, 0
+          )).toISOString();
         }
-        throw new Error(profileError.detail || 'Profil güncellenemedi');
+  
+        // Then update profile data
+        const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session?.user?.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            gender: profileInfo.gender,
+            sexual_preference: profileInfo.preference,
+            biography: profileInfo.biography,
+            latitude: profileInfo.latitude,
+            longitude: profileInfo.longitude,
+            birth_date: formattedBirthDate
+          })
+        });
+  
+        if (!profileResponse.ok) {
+          const profileError = await profileResponse.json();
+          if (profileError.detail) {
+            // Handle nested object error format
+            if (typeof profileError.detail === 'object' && !Array.isArray(profileError.detail)) {
+              const errorMessage = Object.entries(profileError.detail)
+                .map(([field, message]) => `${message}`)
+                .join(', ');
+              throw new Error(errorMessage);
+            }
+            // Handle array format
+            else if (Array.isArray(profileError.detail)) {
+              throw new Error(profileError.detail[0].msg);
+            }
+            // Handle string format
+            else {
+              throw new Error(profileError.detail);
+            }
+          }
+          throw new Error('Profil güncellenemedi');
+        }
+  
+        toast.success('Profil başarıyla güncellendi');
+        await fetchProfile();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Profil güncellenirken bir hata oluştu');
+        console.error('Profile update error:', error);
       }
-
-      toast.success('Profil başarıyla güncellendi');
-      await fetchProfile();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Profil güncellenirken bir hata oluştu');
-      console.error('Profile update error:', error);
-    }
-  };
+    };
 
   const handleManualLocationSelect = async () => {
     if (!selectedPosition) return;

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { FiSend, FiMoreVertical, FiSearch, FiCircle, FiSlash, FiFlag, FiArrowLeft, FiLoader } from "react-icons/fi";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
 import { Metadata } from "next";
 import WebSocketService from "@/services/websocket";
@@ -14,6 +14,14 @@ const metadata: Metadata = {
   title: "Mesajlar | CrushIt",
   description: "CrushIt platformunda mesajlarınızı yönetin."
 };
+
+interface BlockStatus {
+  is_blocked: boolean;
+  blocked_by_me: boolean;
+  blocked_by_them: boolean;
+  blocker_id: string | null;
+}
+
 
 interface ChatUser {
   id: string;
@@ -88,6 +96,13 @@ const ChatPage = () => {
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
   const [isBlockLoading, setIsBlockLoading] = useState(false);
   const [isReportLoading, setIsReportLoading] = useState(false);
+  const [blockStatus, setBlockStatus] = useState<BlockStatus>({
+    is_blocked: false,
+    blocked_by_me: false,
+    blocked_by_them: false,
+    blocker_id: null
+  });
+  
   useEffect(() => {
     document.title = metadata.title as string;
 
@@ -326,8 +341,9 @@ const ChatPage = () => {
       // URL'den alınan kullanıcı ID'si
       const params = new URLSearchParams(window.location.search);
       const userIdFromUrl = params.get('user');
-      
-      if (userIdFromUrl) {
+      console.log('userIdFromUrl:', userIdFromUrl);
+      console.log('conversations:', conversations);
+      if (userIdFromUrl && session?.user?.accessToken && conversations.length > 0) {
         const urlConversation = data.find(c => c.user.id === userIdFromUrl);
       
         if (urlConversation) {
@@ -378,10 +394,42 @@ const ChatPage = () => {
 
   const fetchMessages = async (userId: string) => {
     if (!session?.user?.accessToken) return;
-
+  
     setIsLoadingMessages(true);
-
+  
     try {
+      // First get the username for block check
+      const userResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${userId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.user.accessToken}`,
+          }
+        }
+      );
+  
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user');
+      }
+  
+      const userData = await userResponse.json();
+      
+      // Check block status
+      const blockStatusResult = await checkBlockStatus(userData.username);
+      setBlockStatus(blockStatusResult || {
+        is_blocked: false,
+        blocked_by_me: false,
+        blocked_by_them: false,
+        blocker_id: null
+      });
+  
+      // If blocked, don't fetch messages
+      if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+        setMessages([]);
+        return;
+      }
+  
+      // If not blocked, proceed with message fetch
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/messages/${userId}`,
         {
@@ -390,28 +438,52 @@ const ChatPage = () => {
           }
         }
       );
-
+  
       if (!response.ok) {
         throw new Error('Failed to fetch messages');
       }
-
+  
       const data: Message[] = await response.json();
       setMessages(data);
-
-      // Update the conversations to mark messages as read
+  
+      // Update conversations unread count
       const updatedConversations = conversations.map(conv => {
         if (conv.user.id === userId) {
           return { ...conv, unread_count: 0 };
         }
         return conv;
       });
-
+  
       setConversations(updatedConversations);
+  
     } catch (error) {
       console.error('Messages fetch error:', error);
       toast.error('Mesajlar yüklenemedi');
     } finally {
       setIsLoadingMessages(false);
+    }
+  };
+  
+  const checkBlockStatus = async (username: string) => {
+    if (!session?.user?.accessToken) return;
+  
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is_blocked?blocked_username=${username}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.user.accessToken}`,
+          }
+        }
+      );
+  
+      if (!response.ok) throw new Error('Failed to check block status');
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Block status check error:', error);
+      return null;
     }
   };
 
@@ -547,23 +619,49 @@ const ChatPage = () => {
   }, [session]);
 
     const handleSelectChat = async (userId: string, username: string, user: ChatUser) => {
-    // Önce mevcut bilgileri ayarla
-    setActiveChat(userId);
-    setActiveChatUser(user);
-    
-    // Ardından profil detaylarını getir
-    const profileDetails = await fetchUserProfileDetails(username);
-    
-    if (profileDetails && profileDetails.pictures && profileDetails.pictures.length > 0) {
-      // Profil fotoğrafını güncelle
-      const primaryPicture = profileDetails.pictures.find((pic: any) => pic.is_primary) || profileDetails.pictures[0];
+  // Check block status before setting active chat
+  const blockStatusResult = await checkBlockStatus(username);
+  
+  if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+    toast.error('Bu kullanıcı ile mesajlaşamazsınız');
+    router.replace('/chat');
+
+    setActiveChat(null);
+    setActiveChatUser(null);
+    return;
+  }
+
+  setActiveChat(userId);
+  setActiveChatUser(user);
+  
+  // Rest of the existing code...
+};
+
+useEffect(() => {
+  const checkUrlBlockStatus = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const userIdFromUrl = params.get('user');
+
+    if (userIdFromUrl && conversations.length > 0) {
+      const conversation = conversations.find(c => c.user.id === userIdFromUrl);
       
-      setActiveChatUser(prev => ({
-        ...prev!,
-        avatar: primaryPicture.backend_url
-      }));
+      if (conversation) {
+        const blockStatusResult = await checkBlockStatus(conversation.user.username);
+        
+        if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+          toast.error('Bu kullanıcı ile mesajlaşamazsınız');
+          router.replace('/chat');
+          return;
+        }
+      }
     }
   };
+
+  checkUrlBlockStatus();
+}, [conversations]);
+
+
+
 
   const handleBlock = () => {
     setShowBlockModal(true);
@@ -642,6 +740,49 @@ const ChatPage = () => {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+    // Add this useEffect for immediate URL-based block checking
+  useEffect(() => {
+    const checkInitialBlockStatus = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const userIdFromUrl = params.get('user');
+  
+      if (!userIdFromUrl || !session?.user?.accessToken) return;
+  
+      try {
+        // First get the username from user ID
+        const userResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${userIdFromUrl}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.user.accessToken}`,
+            }
+          }
+        );
+  
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user');
+        }
+  
+        const userData = await userResponse.json();
+        
+        // Check block status using username
+        const blockStatusResult = await checkBlockStatus(userData.username);
+        
+        if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+          toast.error('Bu kullanıcı ile mesajlaşamazsınız');
+          router.replace('/chat');
+          return;
+        }
+      } catch (error) {
+        console.error('Initial block status check error:', error);
+        toast.error('Kullanıcı bilgileri alınamadı');
+        router.replace('/chat');
+      }
+    };
+  
+    checkInitialBlockStatus();
+  }, [session]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -1087,88 +1228,109 @@ const ChatPage = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Messages */}
-                  <div className="flex-grow overflow-y-auto p-4 space-y-6"
-                    style={{
-                      WebkitOverflowScrolling: 'touch',
-                      scrollbarWidth: 'none', // Firefox için
-                      msOverflowStyle: 'none', // IE ve Edge için
-                    }}>
-                    {isLoadingMessages ? (
-                      <div className="flex items-center justify-center h-full">
-                        <FiLoader className="w-8 h-8 text-[#D63384] animate-spin" />
+                  {blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center p-4">
+                      <div className="mb-4">
+                        <FiSlash className="w-16 h-16 text-red-500 mx-auto" />
                       </div>
-                    ) : messages.length > 0 ? (
-                      messages.map((message) => {
-                        // Use currentUserId instead of session.user.id
-                        const isCurrentUser = currentUserId && String(message.sender_id) === String(currentUserId);
-
-
-                        return (
-                          <motion.div
-                            key={message.id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.2 }}
-                            className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
-                          >
-                            {!isCurrentUser && (
-                              <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                                <Image
-                                  src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
-                                  alt="User avatar"
-                                  width={32}
-                                  height={32}
-                                  className="object-cover"
-                                  loading="eager" // Öncelikli yükleme
-                                  priority
-                                />
-                              </div>
-                            )}
-                            <div
-                              className={`max-w-[70%] rounded-2xl px-4 py-3 ${isCurrentUser
-                                ? "bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white"
-                                : "bg-[#3C3C3E] text-white"
-                                }`}
-                            >
-                              <p className="leading-relaxed">{message.content}</p>
-                              <span className="text-xs text-gray-300 mt-2 block">
-                                {message.timestamp ? formatTimestamp(message.timestamp) : formatTimestamp(new Date().toISOString())}
-                              </span>
-                            </div>
-                          </motion.div>
-                        );
-                      })
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <p className="text-gray-400">Henüz mesaj yok</p>
-                        <p className="text-gray-500 text-sm mt-2">Sohbete başlamak için mesaj gönderin</p>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  {/* Message Input */}
-                  <form onSubmit={handleSendMessage} className="sticky bottom-0 bg-[#2C2C2E] p-4 border-t border-[#3C3C3E]">
-                    <div className="flex items-center space-x-4">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Mesajınızı yazın..."
-                        className="flex-1 bg-[#3C3C3E] text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#D63384] transition-all"
-                      />
-                      <motion.button
-                        type="submit"
-                        whileTap={{ scale: 0.95 }}
-                        disabled={!newMessage.trim()}
-                        className="p-3 rounded-full bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white disabled:opacity-50 transition-all hover:shadow-lg"
-                      >
-                        <FiSend size={20} />
-                      </motion.button>
+                      <h2 className="text-xl font-semibold text-white mb-2">
+                        {blockStatus.blocked_by_me ? 
+                          "Bu Kullanıcıyı Engellediniz" : 
+                          "Bu Kullanıcı Sizi Engelledi"}
+                      </h2>
+                      <p className="text-gray-400">
+                        {blockStatus.blocked_by_me ?
+                          "Bu kullanıcıyı engellediğiniz için mesajlaşamazsınız." :
+                          "Bu kullanıcı sizi engellediği için mesajlaşamazsınız."}
+                      </p>
                     </div>
-                  </form>
+                  </div>
+                ) : (
+                  <>
+                    {/* Messages */}
+                    <div className="flex-grow overflow-y-auto p-4 space-y-6"
+                      style={{
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'none', // Firefox için
+                        msOverflowStyle: 'none', // IE ve Edge için
+                      }}>
+                      {isLoadingMessages ? (
+                        <div className="flex items-center justify-center h-full">
+                          <FiLoader className="w-8 h-8 text-[#D63384] animate-spin" />
+                        </div>
+                      ) : messages.length > 0 ? (
+                        messages.map((message) => {
+                          // Use currentUserId instead of session.user.id
+                          const isCurrentUser = currentUserId && String(message.sender_id) === String(currentUserId);
+
+
+                          return (
+                            <motion.div
+                              key={message.id}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.2 }}
+                              className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
+                            >
+                              {!isCurrentUser && (
+                                <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
+                                  <Image
+                                    src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
+                                    alt="User avatar"
+                                    width={32}
+                                    height={32}
+                                    className="object-cover"
+                                    loading="eager" // Öncelikli yükleme
+                                    priority
+                                  />
+                                </div>
+                              )}
+                              <div
+                                className={`max-w-[70%] rounded-2xl px-4 py-3 ${isCurrentUser
+                                  ? "bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white"
+                                  : "bg-[#3C3C3E] text-white"
+                                  }`}
+                              >
+                                <p className="leading-relaxed">{message.content}</p>
+                                <span className="text-xs text-gray-300 mt-2 block">
+                                  {message.timestamp ? formatTimestamp(message.timestamp) : formatTimestamp(new Date().toISOString())}
+                                </span>
+                              </div>
+                            </motion.div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <p className="text-gray-400">Henüz mesaj yok</p>
+                          <p className="text-gray-500 text-sm mt-2">Sohbete başlamak için mesaj gönderin</p>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Message Input */}
+                    <form onSubmit={handleSendMessage} className="sticky bottom-0 bg-[#2C2C2E] p-4 border-t border-[#3C3C3E]">
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Mesajınızı yazın..."
+                          className="flex-1 bg-[#3C3C3E] text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#D63384] transition-all"
+                        />
+                        <motion.button
+                          type="submit"
+                          whileTap={{ scale: 0.95 }}
+                          disabled={!newMessage.trim()}
+                          className="p-3 rounded-full bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white disabled:opacity-50 transition-all hover:shadow-lg"
+                        >
+                          <FiSend size={20} />
+                        </motion.button>
+                      </div>
+                    </form>
+                    </>
+        )}
                 </div>
               </>
             ) : (

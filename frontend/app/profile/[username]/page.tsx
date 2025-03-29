@@ -307,7 +307,7 @@ const ProfilePage = () => {
 
   // Update renderBlockedView to use proper onClick handler
   const renderBlockedView = () => {
-    if (blockStatus.blocked_by_me.is_blocked) {
+    if (blockStatus.blocked_by_me && blockStatus.is_blocked) {
       return (
         <div className="container mx-auto px-4 text-center">
           <div className="bg-[#2C2C2E] rounded-xl p-8">
@@ -325,8 +325,20 @@ const ProfilePage = () => {
           </div>
         </div>
       );
+    } else if (blockStatus.blocked_by_them && blockStatus.is_blocked) {
+      return (
+        <div className="container mx-auto px-4 text-center">
+          <div className="bg-[#2C2C2E] rounded-xl p-8">
+            <FiSlash className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-4">Bu Kullanıcı Sizi Engelledi</h2>
+            <p className="text-gray-300 mb-6">
+              Bu kullanıcı sizi engellediği için profilini görüntüleyemezsiniz.
+            </p>
+          </div>
+        </div>
+      );
     }
-    // ...rest of the code
+    return null;
   };
 
   const handleReport = () => {
@@ -652,7 +664,7 @@ const ProfilePage = () => {
     <section className="pt-[150px] pb-[120px] bg-[#1C1C1E]">
       {isLoading ? (
         <LoadingSpinner />
-      ) : blockStatus.is_blocked.is_blocked ? (
+      ) : blockStatus.is_blocked || blockStatus.blocked_by_them.is_blocked || blockStatus.blocked_by_me.is_blocked ? (
         renderBlockedView()
       ) : profile ? (
         <div className="container mx-auto px-4">
