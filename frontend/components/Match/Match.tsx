@@ -8,7 +8,7 @@ import "rc-slider/assets/index.css";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Profile {
   id: string;
@@ -67,11 +67,34 @@ enum SortOption {
 
 const Match = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const DEFAULT_MIN_AGE = 18;
   const DEFAULT_MAX_AGE = 99;
   const DEFAULT_MIN_FAME = 0;
   const DEFAULT_MAX_FAME = 5;
   const DEFAULT_MAX_DISTANCE = 20000;
+
+  const getInitialFilterValues = () => {
+    const minAge = parseInt(searchParams.get("min_age") || DEFAULT_MIN_AGE.toString());
+    const maxAge = parseInt(searchParams.get("max_age") || DEFAULT_MAX_AGE.toString());
+    const minFame = parseInt(searchParams.get("min_fame") || DEFAULT_MIN_FAME.toString());
+    const maxFame = parseInt(searchParams.get("max_fame") || DEFAULT_MAX_FAME.toString());
+    const maxDistance = parseInt(searchParams.get("max_distance") || DEFAULT_MAX_DISTANCE.toString());
+    const tags = searchParams.getAll("tag");
+    
+    return {
+      minAge: isNaN(minAge) ? DEFAULT_MIN_AGE : minAge,
+      maxAge: isNaN(maxAge) ? DEFAULT_MAX_AGE : maxAge,
+      minFame: isNaN(minFame) ? DEFAULT_MIN_FAME : minFame,
+      maxFame: isNaN(maxFame) ? DEFAULT_MAX_FAME : maxFame,
+      maxDistance: isNaN(maxDistance) ? DEFAULT_MAX_DISTANCE : maxDistance,
+      tags
+    };
+  };
+
+  const initialValues = getInitialFilterValues();
+
   const [ageRange, setAgeRange] = useState([DEFAULT_MIN_AGE, DEFAULT_MAX_AGE]);
   const [fameRating, setFameRating] = useState([DEFAULT_MIN_FAME, DEFAULT_MAX_FAME]);
   const [tags, setTags] = useState<string[]>([]);
@@ -82,12 +105,12 @@ const Match = () => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [filters, setFilters] = useState<FilterState>({
-    min_age: DEFAULT_MIN_AGE,
-    max_age: DEFAULT_MAX_AGE,
-    min_fame: DEFAULT_MIN_FAME,
-    max_fame: DEFAULT_MAX_FAME,
-    max_distance: DEFAULT_MAX_DISTANCE,
-    tags: []
+    min_age: initialValues.minAge,
+    max_age: initialValues.maxAge,
+    min_fame: initialValues.minFame,
+    max_fame: initialValues.maxFame,
+    max_distance: initialValues.maxDistance,
+    tags: initialValues.tags
   });
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [isLikeLoading, setIsLikeLoading] = useState<string | null>(null);
@@ -118,21 +141,26 @@ const Match = () => {
 
   // Handle filter submit function
   const handleFilterSubmit = () => {
-    setFilters({
+    const newFilters = {
       min_age: ageRange[0],
       max_age: ageRange[1],
       min_fame: fameRating[0],
       max_fame: fameRating[1],
       max_distance: distance,
       tags: tags
-    });
+    };
+    
+    setFilters(newFilters);
     setFiltersApplied(true);
     setPage(0);
-    setLoadedProfileIds(new Set()); // Reset loaded profiles
-    setProfiles([]); // Clear existing profiles when applying new filters
+    setLoadedProfileIds(new Set());
+    setProfiles([]);
     setIsLoading(true);
     
-    // Immediately fetch profiles with new filters
+    // URL'yi güncelle
+    updateUrlWithFilters(newFilters);
+    
+    // Profilleri yükle
     setTimeout(() => {
       fetchProfiles();
     }, 0);
@@ -158,6 +186,29 @@ const Match = () => {
     if (node) observer.current.observe(node);
   }, [isLoading, hasMore, isFetchingMore]);
 
+  const updateUrlWithFilters = (newFilters: FilterState) => {
+    const params = new URLSearchParams();
+    
+    // Sadece default değerlerden farklı olanları ekle
+    if (newFilters.min_age !== DEFAULT_MIN_AGE) params.append("min_age", newFilters.min_age.toString());
+    if (newFilters.max_age !== DEFAULT_MAX_AGE) params.append("max_age", newFilters.max_age.toString());
+    if (newFilters.min_fame !== DEFAULT_MIN_FAME) params.append("min_fame", newFilters.min_fame.toString());
+    if (newFilters.max_fame !== DEFAULT_MAX_FAME) params.append("max_fame", newFilters.max_fame.toString());
+    if (newFilters.max_distance !== DEFAULT_MAX_DISTANCE) params.append("max_distance", newFilters.max_distance.toString());
+    
+    // Sıralama parametresini ekle
+    if (sortBy !== SortOption.DISTANCE) params.append("sort", sortBy);
+    
+    // Etiketleri ekle
+    newFilters.tags.forEach(tag => {
+      params.append("tag", tag);
+    });
+    
+    // URL'yi güncelle (history'ye ekleyerek)
+    const url = params.toString() ? `?${params.toString()}` : '';
+    router.push(`/match${url}`, { scroll: false });
+  };
+
   // Initialize data on first load - immediately fetch profiles
   useEffect(() => {
     const initializeData = async () => {
@@ -178,6 +229,51 @@ const Match = () => {
     // Always initialize on component mount
     initializeData();
   }, [session]);
+
+  useEffect(() => {
+    if (!isInitialLoad && filtersApplied) {
+      updateUrlWithFilters(filters);
+    }
+  }, [sortBy]);
+
+  useEffect(() => {
+    // Başlangıçta çalıştırma
+    if (isInitialLoad) return;
+    
+    const newValues = getInitialFilterValues();
+    const sortParam = searchParams.get("sort");
+    
+    // Sadece URL'den yüklenen değerleri değiştir
+    setAgeRange([newValues.minAge, newValues.maxAge]);
+    setFameRating([newValues.minFame, newValues.maxFame]);
+    setDistance(newValues.maxDistance);
+    setTags(newValues.tags);
+    
+    // Sıralamayı güncelle
+    if (sortParam && Object.values(SortOption).includes(sortParam as SortOption)) {
+      setSortBy(sortParam as SortOption);
+    }
+    
+    // Filtreleri güncelle ve verileri yeniden yükle
+    setFilters({
+      min_age: newValues.minAge,
+      max_age: newValues.maxAge,
+      min_fame: newValues.minFame,
+      max_fame: newValues.maxFame,
+      max_distance: newValues.maxDistance,
+      tags: newValues.tags
+    });
+    
+    if (!isInitialLoad) {
+      setPage(0);
+      setLoadedProfileIds(new Set());
+      setProfiles([]);
+      setIsLoading(true);
+      setTimeout(() => {
+        fetchProfiles();
+      }, 0);
+    }
+  }, [searchParams]);
 
   // Handle filter changes
   useEffect(() => {
@@ -523,6 +619,8 @@ const Match = () => {
     setLoadedProfileIds(new Set());
     setProfiles([]);
     setIsLoading(true);
+
+    router.push('/match', { scroll: false });
     
     // Immediately fetch profiles with default filters
     setTimeout(() => {
@@ -567,50 +665,59 @@ const Match = () => {
 
   // Sort profiles based on selected sort option
   const sortProfiles = (profiles: SuggestedProfile[]): SuggestedProfile[] => {
-    const sortedProfiles = [...profiles];
+    try {
 
-    switch (sortBy) {
-      case SortOption.AGE_ASC:
-        return sortedProfiles.sort((a, b) =>
-          calculateAge(a.birth_date) - calculateAge(b.birth_date)
-        );
-      case SortOption.AGE_DESC:
-        return sortedProfiles.sort((a, b) =>
-          calculateAge(b.birth_date) - calculateAge(a.birth_date)
-        );
-      case SortOption.DISTANCE:
-        if (userProfile) {
+      if (!profiles || profiles.length === 0) return [];
+      
+      const sortedProfiles = [...profiles];
+
+      switch (sortBy) {
+        case SortOption.AGE_ASC:
           return sortedProfiles.sort((a, b) =>
-            calculateDistance(userProfile.latitude, userProfile.longitude, a.latitude, a.longitude) -
-            calculateDistance(userProfile.latitude, userProfile.longitude, b.latitude, b.longitude)
+            calculateAge(a.birth_date) - calculateAge(b.birth_date)
           );
-        }
-        return sortedProfiles;
-      case SortOption.FAME_RATING:
-        return sortedProfiles.sort((a, b) => b.fame_rating - a.fame_rating);
-        case SortOption.TAGS_MATCH:
-          return sortedProfiles.sort((a, b) => {
-            // Compare how many of the selected filter tags match each profile's tags
-            const aTagNames = a.tags.map(tag => tag.name.toLowerCase());
-            const bTagNames = b.tags.map(tag => tag.name.toLowerCase());
-            const aMatches = tags.filter(tag => aTagNames.includes(tag.toLowerCase())).length;
-            const bMatches = tags.filter(tag => bTagNames.includes(tag.toLowerCase())).length;
-            
-            // Sort by number of matching tags (descending)
-            if (bMatches !== aMatches) {
-              return bMatches - aMatches;
-            }
-            
-            // If same number of matches, sort by distance as secondary criteria
-            if (userProfile) {
-              return calculateDistance(userProfile.latitude, userProfile.longitude, a.latitude, a.longitude) -
-                    calculateDistance(userProfile.latitude, userProfile.longitude, b.latitude, b.longitude);
-            }
-            
-            return 0;
-          });
-      default:
-        return sortedProfiles;
+        case SortOption.AGE_DESC:
+          return sortedProfiles.sort((a, b) =>
+            calculateAge(b.birth_date) - calculateAge(a.birth_date)
+          );
+        case SortOption.DISTANCE:
+          if (userProfile) {
+            return sortedProfiles.sort((a, b) =>
+              calculateDistance(userProfile.latitude, userProfile.longitude, a.latitude, a.longitude) -
+              calculateDistance(userProfile.latitude, userProfile.longitude, b.latitude, b.longitude)
+            );
+          }
+          return sortedProfiles;
+        case SortOption.FAME_RATING:
+          return sortedProfiles.sort((a, b) => b.fame_rating - a.fame_rating);
+          case SortOption.TAGS_MATCH:
+            return sortedProfiles.sort((a, b) => {
+              // Compare how many of the selected filter tags match each profile's tags
+              const aTagNames = a.tags.map(tag => tag.name.toLowerCase());
+              const bTagNames = b.tags.map(tag => tag.name.toLowerCase());
+              const aMatches = tags.filter(tag => aTagNames.includes(tag.toLowerCase())).length;
+              const bMatches = tags.filter(tag => bTagNames.includes(tag.toLowerCase())).length;
+              
+              // Sort by number of matching tags (descending)
+              if (bMatches !== aMatches) {
+                return bMatches - aMatches;
+              }
+              
+              // If same number of matches, sort by distance as secondary criteria
+              if (userProfile) {
+                return calculateDistance(userProfile.latitude, userProfile.longitude, a.latitude, a.longitude) -
+                      calculateDistance(userProfile.latitude, userProfile.longitude, b.latitude, b.longitude);
+              }
+              
+              return 0;
+            });
+        default:
+          return sortedProfiles;
+      }
+    }
+    catch (error) {
+      console.error("Profile sorting error:", error);
+      return profiles || []; // Orijinal profilleri veya boş dizi döndür
     }
   };
 
@@ -694,7 +801,7 @@ const Match = () => {
                   <span className="font-medium">{distance} km</span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2 mt-3">
+                <div className="grid grid-cols-4 gap-2 mt-3">
                   {distanceOptions.map((option, index) => (
                     <button
                       key={index}

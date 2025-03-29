@@ -63,9 +63,9 @@ interface BlockInfo {
 }
 
 interface BlockStatus {
-  is_blocked: BlockInfo;
-  blocked_by_me: BlockInfo;
-  blocked_by_them: BlockInfo;
+  is_blocked: boolean | BlockInfo;
+  blocked_by_me: boolean | BlockInfo;
+  blocked_by_them: boolean | BlockInfo;
   blocker_id: string | null;
 }
 
@@ -126,7 +126,7 @@ const ProfilePage = () => {
     blocker_id: null
   });
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
-
+  
 
   useEffect(() => {
     document.title = metadata.title as string;
@@ -212,6 +212,27 @@ const ProfilePage = () => {
     }
   };
 
+  const isBlockedCheck = () => {
+    console.log(blockStatus);
+    
+    if (!blockStatus) return false;
+    
+    // Doğrudan boolean değer veya BlockInfo objesi olabilir
+    const isBlocked = typeof blockStatus.is_blocked === 'boolean' 
+      ? blockStatus.is_blocked 
+      : blockStatus.is_blocked?.is_blocked;
+      
+    const blockedByMe = typeof blockStatus.blocked_by_me === 'boolean'
+      ? blockStatus.blocked_by_me
+      : blockStatus.blocked_by_me?.is_blocked;
+      
+    const blockedByThem = typeof blockStatus.blocked_by_them === 'boolean'
+      ? blockStatus.blocked_by_them
+      : blockStatus.blocked_by_them?.is_blocked;
+    
+    return !!(isBlocked || blockedByMe || blockedByThem);
+  };
+
   const confirmBlock = async () => {
     if (!session?.user?.accessToken || !profile) return;
 
@@ -277,10 +298,9 @@ const ProfilePage = () => {
         throw new Error('Failed to process unblock');
       }
 
-      // Update block statuses with proper BlockInfo structure
+      // Update block statuses
       setIsBlocked(false);
-      setBlockStatus(prev => ({
-        ...prev,
+      setBlockStatus({
         is_blocked: {
           is_blocked: false,
           block_info: null
@@ -289,15 +309,33 @@ const ProfilePage = () => {
           is_blocked: false,
           block_info: null
         },
-        blocked_by_them: prev.blocked_by_them,
+        blocked_by_them: {
+          is_blocked: false,
+          block_info: null
+        },
         blocker_id: null
-      }));
+      });
 
       setShowBlockModal(false);
       toast.success('Engel kaldırıldı');
 
-      // Refresh profile data
-      await fetchProfile();
+      // Refresh profile data and block status
+      await Promise.all([
+        fetchProfile(),
+        // Block durumunu kontrol et
+        fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block/status/${profile.id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.user.accessToken}`,
+            }
+          }
+        ).then(res => res.json())
+        .then(data => {
+          setBlockStatus(data);
+          setIsBlocked(data.is_blocked?.is_blocked || data.blocked_by_me?.is_blocked);
+        })
+      ]);
 
     } catch (error) {
       console.error('Block error:', error);
@@ -305,9 +343,17 @@ const ProfilePage = () => {
     }
   };
 
-  // Update renderBlockedView to use proper onClick handler
   const renderBlockedView = () => {
-    if (blockStatus.blocked_by_me && blockStatus.is_blocked) {
+    // Doğrudan boolean değer veya BlockInfo objesi olabilir
+    const blockedByMe = typeof blockStatus.blocked_by_me === 'boolean'
+      ? blockStatus.blocked_by_me
+      : blockStatus.blocked_by_me?.is_blocked;
+      
+    const blockedByThem = typeof blockStatus.blocked_by_them === 'boolean'
+      ? blockStatus.blocked_by_them
+      : blockStatus.blocked_by_them?.is_blocked;
+  
+    if (blockedByMe) {
       return (
         <div className="container mx-auto px-4 text-center">
           <div className="bg-[#2C2C2E] rounded-xl p-8">
@@ -325,7 +371,7 @@ const ProfilePage = () => {
           </div>
         </div>
       );
-    } else if (blockStatus.blocked_by_them && blockStatus.is_blocked) {
+    } else if (blockedByThem) {
       return (
         <div className="container mx-auto px-4 text-center">
           <div className="bg-[#2C2C2E] rounded-xl p-8">
@@ -664,7 +710,7 @@ const ProfilePage = () => {
     <section className="pt-[150px] pb-[120px] bg-[#1C1C1E]">
       {isLoading ? (
         <LoadingSpinner />
-      ) : blockStatus.is_blocked || blockStatus.blocked_by_them.is_blocked || blockStatus.blocked_by_me.is_blocked ? (
+      ) : isBlockedCheck() ? (
         renderBlockedView()
       ) : profile ? (
         <div className="container mx-auto px-4">
