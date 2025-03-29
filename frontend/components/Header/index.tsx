@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { IoIosSettings } from "react-icons/io";
+import ThemeToggler from "./ThemeToggler";
 import menuData from "./menuData";
 import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import WebSocketService from "@/services/websocket";
 
 interface NotificationType {
   id: number;
@@ -140,30 +140,21 @@ const Header = () => {
               message = "Yeni bir bildirim";
           }
         
-          const utcDate = new Date(notification.created_at);
-  // Convert to Turkish timezone
-  const turkishDate = new Date(utcDate.toLocaleString('en-US', {
-    timeZone: 'Europe/Istanbul'
-  }));
-  
-  const time = turkishDate.toLocaleString('tr-TR', {
-    hour: '2-digit', 
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'Europe/Istanbul'
-  });
-
-  return {
-    id: notification.id,
-    type: notification.type, 
-    message,
-    time,
-    read: notification.is_read,
-    sender_id: notification.sender_id,
-    sender_username: notification.sender_username
-  };
-});
+          return {
+            id: notification.id,
+            type: notification.type,
+            message,
+            time: new Date(notification.created_at).toLocaleString('tr-TR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              day: '2-digit',
+              month: '2-digit'
+            }),
+            read: notification.is_read,
+            sender_id: notification.sender_id,
+            sender_username: notification.sender_username
+          };
+        });
 
         // İlk sayfa ise notifications'ı sıfırla, değilse ekle
         if (notificationsPage === 0) {
@@ -402,46 +393,56 @@ const Header = () => {
     }
   };
 
-  
-  // Update formatTimestamp function
-    const formatTimestamp = (timestamp: string): string => {
+  const formatTimestamp = (timestamp: string): string => {
     try {
       if (!timestamp) return "";
       
-      // Already formatted check
+      // First check if it's already formatted like "DD/MM HH:MM"
       if (/^\d{1,2}\/\d{1,2}\s\d{1,2}:\d{1,2}$/.test(timestamp)) {
-        return timestamp;
+        return timestamp; // Return as is if already formatted
       }
-  
-      // Create UTC date first
-      const utcDate = new Date(timestamp + 'Z'); // Force UTC
       
-      // Convert to Turkish time
-      const turkishOptions = {
-        timeZone: 'Europe/Istanbul',
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit'
-      };
-  
+      // Try to parse the timestamp
+      const date = new Date(timestamp);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date format:', timestamp);
+        return timestamp; // Return original timestamp instead of empty string
+      }
+      
       const now = new Date();
-      const diffMs = now.getTime() - utcDate.getTime();
+      const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   
-      if (diffMins < 1) return "Az önce";
-      if (diffMins < 60) return `${diffMins} dakika önce`;
-      if (diffHours < 24) return `${diffHours} saat önce`;
-      if (diffDays < 7) return `${diffDays} gün önce`;
-  
-      return utcDate.toLocaleString('tr-TR', turkishOptions as Intl.DateTimeFormatOptions);
-  
+      if (diffMins < 1) {
+        return "Az önce";
+      } else if (diffMins < 60) {
+        return `${diffMins} dakika önce`;
+      } else if (diffHours < 24) {
+        return `${diffHours} saat önce`;
+      } else if (diffDays < 7) {
+        return `${diffDays} gün önce`;
+      } else {
+        // Format the date properly for older notifications
+        try {
+          return new Intl.DateTimeFormat('tr-TR', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+          }).format(date);
+        } catch (formattingError) {
+          console.error('Date formatting error:', formattingError);
+          // Fallback to a simpler format
+          return date.toLocaleDateString();
+        }
+      }
     } catch (error) {
-      console.error('Timestamp format error:', error, 'Timestamp:', timestamp);
-      return timestamp || "";
+      console.error('Timestamp format error:', error, 'for timestamp:', timestamp);
+      return timestamp || ""; // Return original timestamp as fallback
     }
   };
 
@@ -483,26 +484,6 @@ const getNotificationIcon = (type: string) => {
     }
   };
 
-  useEffect(() => {
-    if (session?.user?.accessToken) {
-      const wsService = WebSocketService.getInstance();
-      wsService.connect(process.env.NEXT_PUBLIC_BACKEND_API_URL, session.user.accessToken);
-  
-      // Bildirimleri dinle
-      const handleNotification = (data: any) => {
-        setNotifications((prev) => [data, ...prev]);
-        setNotificationCount((prev) => prev + 1);
-      };
-  
-      wsService.addNotificationHandler(handleNotification);
-  
-      return () => {
-        wsService.removeNotificationHandler(handleNotification);
-        wsService.disconnect();
-      };
-    }
-  }, [session]);
-
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -518,6 +499,15 @@ const getNotificationIcon = (type: string) => {
   }, []);
 
   // Fetch notification count on initial load
+  useEffect(() => {
+    if (session?.user?.accessToken) {
+      fetchNotificationCount();
+
+      // Set up polling for notification count (every 30 seconds)
+      const intervalId = setInterval(fetchNotificationCount, 30000);
+      return () => clearInterval(intervalId);
+    }
+  }, [session]);
 
   // Add notification bell to mobile menu
   const toggleMobileNotifications = () => {
