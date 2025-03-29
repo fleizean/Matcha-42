@@ -38,7 +38,7 @@ interface Message {
   sender_id: string;
   recipient_id: string;
   content: string;
-  timestamp: string;
+  created_at: string;
   is_read: boolean;
 }
 
@@ -102,7 +102,7 @@ const ChatPage = () => {
     blocked_by_them: false,
     blocker_id: null
   });
-  
+
   useEffect(() => {
     document.title = metadata.title as string;
 
@@ -185,7 +185,7 @@ const ChatPage = () => {
     // WebSocket mesaj işleyiciyi güncelleyin
     const handleWsMessage = (data: any) => {
       console.log("WebSocket message received:", data);
-    
+
       if (data.type === 'message') {
         // Gelen mesaj mevcut aktif sohbeti ilgilendiriyor mu kontrol et
         const isCurrentChat =
@@ -203,7 +203,7 @@ const ChatPage = () => {
             sender_id: data.sender_id,
             recipient_id: data.recipient_id || currentUserId,
             content: data.content,
-            timestamp: timestamp,
+            created_at: timestamp,
             is_read: false
           };
 
@@ -311,10 +311,10 @@ const ChatPage = () => {
         } else {
           toast.error('Kullanıcı bulunamadı veya bağlantı kurulamadı.');
         }
-        
+
         // URL'den user parametresini kaldır
         router.replace('/chat');
-        
+
         // Aktif sohbeti temizle
         setActiveChat(null);
         return;
@@ -345,7 +345,7 @@ const ChatPage = () => {
       console.log('conversations:', conversations);
       if (userIdFromUrl && session?.user?.accessToken && conversations.length > 0) {
         const urlConversation = data.find(c => c.user.id === userIdFromUrl);
-      
+
         if (urlConversation) {
           // URL'deki kullanıcı konuşmalar arasında varsa, onu seç
           setActiveChat(userIdFromUrl);
@@ -394,9 +394,9 @@ const ChatPage = () => {
 
   const fetchMessages = async (userId: string) => {
     if (!session?.user?.accessToken) return;
-  
+
     setIsLoadingMessages(true);
-  
+
     try {
       // First get the username for block check
       const userResponse = await fetch(
@@ -407,13 +407,13 @@ const ChatPage = () => {
           }
         }
       );
-  
+
       if (!userResponse.ok) {
         throw new Error('Failed to fetch user');
       }
-  
+
       const userData = await userResponse.json();
-      
+
       // Check block status
       const blockStatusResult = await checkBlockStatus(userData.username);
       setBlockStatus(blockStatusResult || {
@@ -422,13 +422,13 @@ const ChatPage = () => {
         blocked_by_them: false,
         blocker_id: null
       });
-  
+
       // If blocked, don't fetch messages
       if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
         setMessages([]);
         return;
       }
-  
+
       // If not blocked, proceed with message fetch
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/messages/${userId}`,
@@ -438,14 +438,15 @@ const ChatPage = () => {
           }
         }
       );
-  
+
       if (!response.ok) {
         throw new Error('Failed to fetch messages');
       }
-  
+
       const data: Message[] = await response.json();
+      console.log("data: ", data);
       setMessages(data);
-  
+
       // Update conversations unread count
       const updatedConversations = conversations.map(conv => {
         if (conv.user.id === userId) {
@@ -453,9 +454,9 @@ const ChatPage = () => {
         }
         return conv;
       });
-  
+
       setConversations(updatedConversations);
-  
+
     } catch (error) {
       console.error('Messages fetch error:', error);
       toast.error('Mesajlar yüklenemedi');
@@ -463,10 +464,10 @@ const ChatPage = () => {
       setIsLoadingMessages(false);
     }
   };
-  
+
   const checkBlockStatus = async (username: string) => {
     if (!session?.user?.accessToken) return;
-  
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is_blocked?blocked_username=${username}`,
@@ -477,7 +478,7 @@ const ChatPage = () => {
           }
         }
       );
-  
+
       if (!response.ok) throw new Error('Failed to check block status');
       const data = await response.json();
       return data;
@@ -503,7 +504,7 @@ const ChatPage = () => {
         sender_id: currentUserId,
         recipient_id: activeChat,
         content: newMessage,
-        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         is_read: false
       };
 
@@ -569,11 +570,11 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeChat && conversations.length > 0) {
       const conversation = conversations.find(c => c.user.id === activeChat);
-  
+
       if (conversation) {
         // Mevcut avatar'ı saklayalım, böylece zaten yüklenen fotoğraf kaybolmaz
         const currentAvatar = activeChatUser?.avatar;
-        
+
         setActiveChatUser({
           id: conversation.user.id,
           name: `${conversation.user.first_name} ${conversation.user.last_name}`,
@@ -618,47 +619,47 @@ const ChatPage = () => {
     return () => clearInterval(interval);
   }, [session]);
 
-    const handleSelectChat = async (userId: string, username: string, user: ChatUser) => {
-  // Check block status before setting active chat
-  const blockStatusResult = await checkBlockStatus(username);
-  
-  if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
-    toast.error('Bu kullanıcı ile mesajlaşamazsınız');
-    router.replace('/chat');
+  const handleSelectChat = async (userId: string, username: string, user: ChatUser) => {
+    // Check block status before setting active chat
+    const blockStatusResult = await checkBlockStatus(username);
 
-    setActiveChat(null);
-    setActiveChatUser(null);
-    return;
-  }
+    if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+      toast.error('Bu kullanıcı ile mesajlaşamazsınız');
+      router.replace('/chat');
 
-  setActiveChat(userId);
-  setActiveChatUser(user);
-  
-  // Rest of the existing code...
-};
-
-useEffect(() => {
-  const checkUrlBlockStatus = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const userIdFromUrl = params.get('user');
-
-    if (userIdFromUrl && conversations.length > 0) {
-      const conversation = conversations.find(c => c.user.id === userIdFromUrl);
-      
-      if (conversation) {
-        const blockStatusResult = await checkBlockStatus(conversation.user.username);
-        
-        if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
-          toast.error('Bu kullanıcı ile mesajlaşamazsınız');
-          router.replace('/chat');
-          return;
-        }
-      }
+      setActiveChat(null);
+      setActiveChatUser(null);
+      return;
     }
+
+    setActiveChat(userId);
+    setActiveChatUser(user);
+
+    // Rest of the existing code...
   };
 
-  checkUrlBlockStatus();
-}, [conversations]);
+  useEffect(() => {
+    const checkUrlBlockStatus = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const userIdFromUrl = params.get('user');
+
+      if (userIdFromUrl && conversations.length > 0) {
+        const conversation = conversations.find(c => c.user.id === userIdFromUrl);
+
+        if (conversation) {
+          const blockStatusResult = await checkBlockStatus(conversation.user.username);
+
+          if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
+            toast.error('Bu kullanıcı ile mesajlaşamazsınız');
+            router.replace('/chat');
+            return;
+          }
+        }
+      }
+    };
+
+    checkUrlBlockStatus();
+  }, [conversations]);
 
 
 
@@ -673,13 +674,13 @@ useEffect(() => {
     setShowMenu(false);
   };
 
-    const confirmBlock = async () => {
+  const confirmBlock = async () => {
     if (!session?.user?.accessToken || !activeChat) return;
-  
+
     try {
       // Yükleme durumu için state ekleyebiliriz
       setIsBlockLoading(true);
-  
+
       // Önce user_id ile profil bilgilerini al
       const profileResponse = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${activeChat}`,
@@ -690,17 +691,17 @@ useEffect(() => {
           }
         }
       );
-  
+
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch user profile');
       }
-  
+
       const profileData = await profileResponse.json();
-      
+
       if (!profileData.id) {
         throw new Error('Profile ID not found');
       }
-  
+
       // Şimdi profile_id ile engelleme işlemi yap
       const blockResponse = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block`,
@@ -715,14 +716,14 @@ useEffect(() => {
           })
         }
       );
-  
+
       if (!blockResponse.ok) {
         throw new Error('Failed to block user');
       }
-  
+
       toast.success('Kullanıcı engellendi');
       setShowBlockModal(false);
-  
+
       // Remove the conversation from the list
       setConversations(prev => prev.filter(conv => conv.user.id !== activeChat));
       setActiveChat(null);
@@ -741,14 +742,14 @@ useEffect(() => {
     }
   };
 
-    // Add this useEffect for immediate URL-based block checking
+  // Add this useEffect for immediate URL-based block checking
   useEffect(() => {
     const checkInitialBlockStatus = async () => {
       const params = new URLSearchParams(window.location.search);
       const userIdFromUrl = params.get('user');
-  
+
       if (!userIdFromUrl || !session?.user?.accessToken) return;
-  
+
       try {
         // First get the username from user ID
         const userResponse = await fetch(
@@ -759,16 +760,16 @@ useEffect(() => {
             }
           }
         );
-  
+
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user');
         }
-  
+
         const userData = await userResponse.json();
-        
+
         // Check block status using username
         const blockStatusResult = await checkBlockStatus(userData.username);
-        
+
         if (blockStatusResult?.blocked_by_me || blockStatusResult?.blocked_by_them) {
           toast.error('Bu kullanıcı ile mesajlaşamazsınız');
           router.replace('/chat');
@@ -780,7 +781,7 @@ useEffect(() => {
         router.replace('/chat');
       }
     };
-  
+
     checkInitialBlockStatus();
   }, [session]);
 
@@ -790,13 +791,13 @@ useEffect(() => {
     }
   }, [messages]);
 
-    const submitReport = async () => {
+  const submitReport = async () => {
     if (!session?.user?.accessToken || !activeChat) return;
-  
+
     try {
       // Yükleme durumu için state ekleyebiliriz
       setIsReportLoading(true);
-  
+
       // Önce user_id ile profil bilgilerini al
       const profileResponse = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${activeChat}`,
@@ -807,17 +808,17 @@ useEffect(() => {
           }
         }
       );
-  
+
       if (!profileResponse.ok) {
         throw new Error('Failed to fetch user profile');
       }
-  
+
       const profileData = await profileResponse.json();
-      
+
       if (!profileData.id) {
         throw new Error('Profile ID not found');
       }
-  
+
       // Şimdi profile_id ile şikayet işlemi yap
       const reportResponse = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/report`,
@@ -834,11 +835,11 @@ useEffect(() => {
           })
         }
       );
-  
+
       if (!reportResponse.ok) {
         throw new Error('Failed to report user');
       }
-  
+
       toast.success('Kullanıcı rapor edildi');
       setShowReportModal(false);
       setReportReason("");
@@ -852,49 +853,64 @@ useEffect(() => {
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    try {
-      // Zaman damgası yoksa boş string döndür
-      if (!timestamp) return "";
-  
-      // ISO formatındaki zamanı Date nesnesine çevir
-      const date = new Date(timestamp);
-  
-      // Tarih geçerli mi kontrol et
-      if (isNaN(date.getTime())) {
-        console.warn("Invalid timestamp:", timestamp);
+      const formatTimestamp = (timestamp: string) => {
+      try {
+        if (!timestamp) return "";
+      
+        // ISO formatını UTC olarak ayrıştır
+        const utcDate = new Date(timestamp);
+        
+        // Geçerli bir tarih mi kontrol et
+        if (isNaN(utcDate.getTime())) {
+          console.warn("Invalid timestamp format:", timestamp);
+          return "";
+        }
+        
+        // UTC saatini Türkiye saatine çevir (UTC+3)
+        // UTC zamanını milisaniye olarak al ve 3 saat ekle
+        const trTimeMS = utcDate.getTime() + (6 * 60 * 60 * 1000);
+        const trDate = new Date(trTimeMS);
+        
+        // Şimdiki zamanı Türkiye saati olarak alalım
+        const now = new Date();
+        const trNow = new Date(now.getTime() + (3 - (now.getTimezoneOffset() / 60)) * 60 * 60 * 1000);
+        
+        // Aynı gün içinde olup olmadığını kontrol et
+        const isSameDay =
+          trDate.getUTCDate() === trNow.getUTCDate() &&
+          trDate.getUTCMonth() === trNow.getUTCMonth() &&
+          trDate.getUTCFullYear() === trNow.getUTCFullYear();
+        
+        // Türkiye saati için saat ve dakikayı al
+        const hours = trDate.getUTCHours();
+        const minutes = trDate.getUTCMinutes();
+        
+        if (isSameDay) {
+          // Aynı gün içindeyse sadece saat ve dakika
+          return `${padZero(hours)}:${padZero(minutes)}`;
+        } else {
+          // Farklı gün ise tarih ve saat
+          const dayStr = trDate.getUTCDate();
+          const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+          const monthStr = monthNames[trDate.getUTCMonth()];
+          
+          return `${dayStr} ${monthStr} ${padZero(hours)}:${padZero(minutes)}`;
+        }
+      } catch (error) {
+        console.error('Timestamp format error:', error);
+        console.error('Invalid timestamp:', timestamp);
         return "";
       }
-  
-      // Tarih ve saat arasında çok büyük fark varsa, günü de göster
-      const now = new Date();
-      const diffMs = Math.abs(now.getTime() - date.getTime());
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-        if (diffDays >= 1) {
-          // Bir günden fazla ise tarih ve saati göster
-          return new Intl.DateTimeFormat('tr-TR', {
-            day: 'numeric', 
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-          }).format(date);
-        } else {
-          // Aynı gün içindeyse sadece saati göster
-          return new Intl.DateTimeFormat('tr-TR', {
-            hour: '2-digit',
-            minute: '2-digit'
-          }).format(date);
-      }
-    } catch (error) {
-      console.error('Timestamp format error:', error);
-      return "";
-    }
-  };
+    };
+    
+    // Sayılara sıfır ekleyen yardımcı fonksiyon
+    const padZero = (num: number): string => {
+      return num < 10 ? `0${num}` : `${num}`;
+    };
 
   const fetchUserProfileDetails = async (username: string) => {
     if (!session?.user?.accessToken) return null;
-  
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-for-chat/${username}`,
@@ -904,7 +920,7 @@ useEffect(() => {
           }
         }
       );
-  
+
       if (!response.ok) return null;
       return await response.json();
     } catch (error) {
@@ -917,13 +933,13 @@ useEffect(() => {
     const fetchUserDetailsForUrl = async () => {
       if (activeChat && conversations.length > 0) {
         const conversation = conversations.find(c => c.user.id === activeChat);
-        
+
         if (conversation && conversation.user.username) {
           const profileDetails = await fetchUserProfileDetails(conversation.user.username);
-          
+
           if (profileDetails && profileDetails.pictures && profileDetails.pictures.length > 0) {
             const primaryPicture = profileDetails.pictures.find((pic: any) => pic.is_primary) || profileDetails.pictures[0];
-            
+
             setActiveChatUser(prev => ({
               ...prev!,
               avatar: primaryPicture.backend_url
@@ -932,7 +948,7 @@ useEffect(() => {
         }
       }
     };
-  
+
     if (activeChat) {
       fetchUserDetailsForUrl();
     }
@@ -988,22 +1004,22 @@ useEffect(() => {
                     transition={{ duration: 0.3 }}
                     className={`p-4 flex items-center cursor-pointer hover:bg-[#3C3C3E] transition-all ${activeChat === conv.user.id ? "bg-[#3C3C3E]" : ""
                       }`}
-                      onClick={() => handleSelectChat(conv.user.id, conv.user.username, {
-                        id: conv.user.id,
-                        name: `${conv.user.first_name} ${conv.user.last_name}`,
-                        avatar: conv.profile_picture || '/images/defaults/man-default.png',
-                        lastMessage: conv.recent_message?.content || 'Henüz mesaj yok',
-                        lastMessageTime: conv.recent_message
-                          ? formatTimestamp(conv.recent_message.created_at)
-                          : '',
-                        isOnline: conv.user.is_online,
-                        unreadCount: conv.unread_count
-                      })}
+                    onClick={() => handleSelectChat(conv.user.id, conv.user.username, {
+                      id: conv.user.id,
+                      name: `${conv.user.first_name} ${conv.user.last_name}`,
+                      avatar: conv.profile_picture || '/images/defaults/man-default.png',
+                      lastMessage: conv.recent_message?.content || 'Henüz mesaj yok',
+                      lastMessageTime: conv.recent_message
+                        ? formatTimestamp(conv.recent_message.created_at)
+                        : '',
+                      isOnline: conv.user.is_online,
+                      unreadCount: conv.unread_count
+                    })}
                   >
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full overflow-hidden">
                         <Image
-                          src={conv.profile_picture || '/images/defaults/man-default.png'} 
+                          src={conv.profile_picture || '/images/defaults/man-default.png'}
                           alt={conv.user.first_name}
                           fill
                           className="object-cover"
@@ -1081,14 +1097,14 @@ useEffect(() => {
                     className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                   >
                     {isBlockLoading ? (
-                    <>
-                      <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      İşleniyor...
-                    </>
-                  ) : (
-                    'Engelle'
-                  )}
-                    
+                      <>
+                        <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        İşleniyor...
+                      </>
+                    ) : (
+                      'Engelle'
+                    )}
+
                   </button>
                 </div>
               </div>
@@ -1146,13 +1162,13 @@ useEffect(() => {
                     className="px-4 py-2 bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
                   >
                     {isReportLoading ? (
-                    <>
-                      <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      İşleniyor...
-                    </>
-                  ) : (
-                    'Raporla'
-                  )}
+                      <>
+                        <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                        İşleniyor...
+                      </>
+                    ) : (
+                      'Raporla'
+                    )}
                   </button>
                 </div>
               </div>
@@ -1178,7 +1194,7 @@ useEffect(() => {
                       <div className="relative">
                         <div className="w-10 h-10 rounded-full overflow-hidden">
                           <Image
-                            src={activeChatUser?.avatar || '/images/defaults/man-default.png'} 
+                            src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
                             alt="Active chat"
                             fill
                             className="object-cover"
@@ -1229,108 +1245,108 @@ useEffect(() => {
                     </div>
                   </div>
                   {blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them ? (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center p-4">
-                      <div className="mb-4">
-                        <FiSlash className="w-16 h-16 text-red-500 mx-auto" />
-                      </div>
-                      <h2 className="text-xl font-semibold text-white mb-2">
-                        {blockStatus.blocked_by_me ? 
-                          "Bu Kullanıcıyı Engellediniz" : 
-                          "Bu Kullanıcı Sizi Engelledi"}
-                      </h2>
-                      <p className="text-gray-400">
-                        {blockStatus.blocked_by_me ?
-                          "Bu kullanıcıyı engellediğiniz için mesajlaşamazsınız." :
-                          "Bu kullanıcı sizi engellediği için mesajlaşamazsınız."}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Messages */}
-                    <div className="flex-grow overflow-y-auto p-4 space-y-6"
-                      style={{
-                        WebkitOverflowScrolling: 'touch',
-                        scrollbarWidth: 'none', // Firefox için
-                        msOverflowStyle: 'none', // IE ve Edge için
-                      }}>
-                      {isLoadingMessages ? (
-                        <div className="flex items-center justify-center h-full">
-                          <FiLoader className="w-8 h-8 text-[#D63384] animate-spin" />
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center p-4">
+                        <div className="mb-4">
+                          <FiSlash className="w-16 h-16 text-red-500 mx-auto" />
                         </div>
-                      ) : messages.length > 0 ? (
-                        messages.map((message) => {
-                          // Use currentUserId instead of session.user.id
-                          const isCurrentUser = currentUserId && String(message.sender_id) === String(currentUserId);
+                        <h2 className="text-xl font-semibold text-white mb-2">
+                          {blockStatus.blocked_by_me ?
+                            "Bu Kullanıcıyı Engellediniz" :
+                            "Bu Kullanıcı Sizi Engelledi"}
+                        </h2>
+                        <p className="text-gray-400">
+                          {blockStatus.blocked_by_me ?
+                            "Bu kullanıcıyı engellediğiniz için mesajlaşamazsınız." :
+                            "Bu kullanıcı sizi engellediği için mesajlaşamazsınız."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Messages */}
+                      <div className="flex-grow overflow-y-auto p-4 space-y-6"
+                        style={{
+                          WebkitOverflowScrolling: 'touch',
+                          scrollbarWidth: 'none', // Firefox için
+                          msOverflowStyle: 'none', // IE ve Edge için
+                        }}>
+                        {isLoadingMessages ? (
+                          <div className="flex items-center justify-center h-full">
+                            <FiLoader className="w-8 h-8 text-[#D63384] animate-spin" />
+                          </div>
+                        ) : messages.length > 0 ? (
+                          messages.map((message) => {
+                            // Use currentUserId instead of session.user.id
+                            const isCurrentUser = currentUserId && String(message.sender_id) === String(currentUserId);
 
 
-                          return (
-                            <motion.div
-                              key={message.id}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.2 }}
-                              className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
-                            >
-                              {!isCurrentUser && (
-                                <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                                  <Image
-                                    src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
-                                    alt="User avatar"
-                                    width={32}
-                                    height={32}
-                                    className="object-cover"
-                                    loading="eager" // Öncelikli yükleme
-                                    priority
-                                  />
-                                </div>
-                              )}
-                              <div
-                                className={`max-w-[70%] rounded-2xl px-4 py-3 ${isCurrentUser
-                                  ? "bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white"
-                                  : "bg-[#3C3C3E] text-white"
-                                  }`}
+                            return (
+                              <motion.div
+                                key={message.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
                               >
-                                <p className="leading-relaxed">{message.content}</p>
-                                <span className="text-xs text-gray-300 mt-2 block">
-                                  {message.timestamp ? formatTimestamp(message.timestamp) : formatTimestamp(new Date().toISOString())}
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <p className="text-gray-400">Henüz mesaj yok</p>
-                          <p className="text-gray-500 text-sm mt-2">Sohbete başlamak için mesaj gönderin</p>
-                        </div>
-                      )}
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Message Input */}
-                    <form onSubmit={handleSendMessage} className="sticky bottom-0 bg-[#2C2C2E] p-4 border-t border-[#3C3C3E]">
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder="Mesajınızı yazın..."
-                          className="flex-1 bg-[#3C3C3E] text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#D63384] transition-all"
-                        />
-                        <motion.button
-                          type="submit"
-                          whileTap={{ scale: 0.95 }}
-                          disabled={!newMessage.trim()}
-                          className="p-3 rounded-full bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white disabled:opacity-50 transition-all hover:shadow-lg"
-                        >
-                          <FiSend size={20} />
-                        </motion.button>
+                                {!isCurrentUser && (
+                                  <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
+                                    <Image
+                                      src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
+                                      alt="User avatar"
+                                      width={32}
+                                      height={32}
+                                      className="object-cover"
+                                      loading="eager" // Öncelikli yükleme
+                                      priority
+                                    />
+                                  </div>
+                                )}
+                                <div
+                                  className={`max-w-[70%] rounded-2xl px-4 py-3 ${isCurrentUser
+                                    ? "bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white"
+                                    : "bg-[#3C3C3E] text-white"
+                                    }`}
+                                >
+                                  <p className="leading-relaxed">{message.content}</p>
+                                  <span className="text-xs text-gray-300 mt-2 block">
+                                    {message.created_at ? formatTimestamp(message.created_at) : formatTimestamp(new Date().toISOString())}
+                                  </span>
+                                </div>
+                              </motion.div>
+                            );
+                          })
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <p className="text-gray-400">Henüz mesaj yok</p>
+                            <p className="text-gray-500 text-sm mt-2">Sohbete başlamak için mesaj gönderin</p>
+                          </div>
+                        )}
+                        <div ref={messagesEndRef} />
                       </div>
-                    </form>
+
+                      {/* Message Input */}
+                      <form onSubmit={handleSendMessage} className="sticky bottom-0 bg-[#2C2C2E] p-4 border-t border-[#3C3C3E]">
+                        <div className="flex items-center space-x-4">
+                          <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Mesajınızı yazın..."
+                            className="flex-1 bg-[#3C3C3E] text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#D63384] transition-all"
+                          />
+                          <motion.button
+                            type="submit"
+                            whileTap={{ scale: 0.95 }}
+                            disabled={!newMessage.trim()}
+                            className="p-3 rounded-full bg-gradient-to-r from-[#8A2BE2] to-[#D63384] text-white disabled:opacity-50 transition-all hover:shadow-lg"
+                          >
+                            <FiSend size={20} />
+                          </motion.button>
+                        </div>
+                      </form>
                     </>
-        )}
+                  )}
                 </div>
               </>
             ) : (
