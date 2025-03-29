@@ -1085,6 +1085,57 @@ async def delete_account(
             detail=f"Error deleting account: {str(e)}"
         )    
 
+@router.post("/liked-status")
+async def get_liked_status_batch(
+    request: Request,
+    current_user = Depends(get_current_verified_user),
+    conn = Depends(get_connection)
+):
+    """
+    Get liked status for multiple profiles in a single request
+    Input: List of profile IDs
+    Output: List of profile IDs that the current user has liked
+    """
+    try:
+        # Get request body
+        data = await request.json()
+        profile_ids = data.get("profileIds", [])
+        
+        if not profile_ids:
+            return {"likedProfiles": []}
+        
+        # Get user's profile
+        user_profile = await conn.fetchrow("""
+        SELECT id FROM profiles 
+        WHERE user_id = $1
+        """, current_user["id"])
+        
+        if not user_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Your profile not found"
+            )
+        
+        # Query for likes
+        # Using ANY with array for more efficient querying
+        liked_profiles = await conn.fetch("""
+        SELECT liked_id FROM likes
+        WHERE liker_id = $1 AND liked_id = ANY($2)
+        """, user_profile["id"], profile_ids)
+        
+        # Extract just the IDs into a list
+        liked_profile_ids = [str(row["liked_id"]) for row in liked_profiles]
+        
+        return {"likedProfiles": liked_profile_ids}
+        
+    except Exception as e:
+        print(f"Error in get_liked_status_batch: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error checking liked status: {str(e)}"
+        )
+
+
 @router.get("/me/is-liked/{username}")
 async def check_if_liked(
     username: str,

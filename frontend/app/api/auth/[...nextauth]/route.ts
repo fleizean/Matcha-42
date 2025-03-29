@@ -12,7 +12,13 @@ interface RefreshTokenResponse {
   token_type: string;
 }
 
+// Update the refreshAccessToken function
 const refreshAccessToken = async (token: any) => {
+  // Check if token exists
+  if (!token) {
+    return null;
+  }
+  
   // Check if a refresh is already in progress (prevent duplicate requests)
   if (token.refreshing) {
     return token;
@@ -23,6 +29,11 @@ const refreshAccessToken = async (token: any) => {
     
     // Mark that we're refreshing
     token.refreshing = true;
+    
+    // Make sure refresh token exists
+    if (!token.refreshToken) {
+      throw new Error("No refresh token available");
+    }
     
     // Make a request to the token endpoint with the refresh token
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/refresh`, {
@@ -45,7 +56,7 @@ const refreshAccessToken = async (token: any) => {
 
     const refreshedTokens: RefreshTokenResponse = await response.json();
     
-    if (!refreshedTokens.access_token || !refreshedTokens.refresh_token) {
+    if (!refreshedTokens || !refreshedTokens.access_token || !refreshedTokens.refresh_token) {
       throw new Error("Invalid refresh response: missing tokens");
     }
 
@@ -53,7 +64,7 @@ const refreshAccessToken = async (token: any) => {
     let expirationTime;
     try {
       const tokenData = JSON.parse(atob(refreshedTokens.access_token.split('.')[1]));
-      expirationTime = tokenData.exp * 1000;
+      expirationTime = tokenData && tokenData.exp ? tokenData.exp * 1000 : null;
     } catch (error) {
       console.error("Error parsing token expiration:", error);
       // Fallback expiration (15 minutes)
@@ -66,7 +77,7 @@ const refreshAccessToken = async (token: any) => {
       ...token,
       accessToken: refreshedTokens.access_token,
       refreshToken: refreshedTokens.refresh_token,
-      expiration: new Date(expirationTime).toISOString(),
+      expiration: expirationTime ? new Date(expirationTime).toISOString() : null,
       refreshing: false,
       error: undefined, // Clear any previous errors
     };
@@ -135,6 +146,7 @@ const handler = NextAuth({
     })
   ],
   callbacks: {
+    // Update the jwt callback with proper null checks
     async jwt({ token, user, trigger }) {
       // Initial sign in
       if (user) {
@@ -148,7 +160,7 @@ const handler = NextAuth({
       // Handle token refresh
       if (trigger === "update") {
         // Force a token refresh when update() is called
-        if (token.refreshToken) {
+        if (token && token.refreshToken) {
           // We keep track of when we last refreshed to prevent rapid successive refreshes
           const timeElapsed = Date.now() - (token.lastRefreshed as number || 0);
           if (timeElapsed < 30000) { // Don't refresh more than once every 30 seconds
@@ -158,43 +170,50 @@ const handler = NextAuth({
           
           console.log("Updating session via update() trigger");
           const refreshedToken = await refreshAccessToken(token);
-          refreshedToken.lastRefreshed = Date.now();
-          return refreshedToken;
+          if (refreshedToken) { // Add null check here
+            refreshedToken.lastRefreshed = Date.now();
+          }
+          return refreshedToken || token; // Return original token if refresh failed
         }
         return token;
       }
 
       // Check token expiration for normal requests
-      const currentTime = Date.now();
-      const expTime = token.expiration ? new Date(token.expiration).getTime() : 0;
+      if (token) { // Add null check for token
+        const currentTime = Date.now();
+        const expTime = token.expiration ? new Date(token.expiration).getTime() : 0;
 
-      // If token expires in less than 2 minutes, refresh it proactively
-      if (expTime > 0 && expTime < currentTime + 120000) {
-        // Double-check that we haven't refreshed recently
-        const timeElapsed = currentTime - (token.lastRefreshed as number || 0);
-        if (timeElapsed < 30000) { // Don't refresh more than once every 30 seconds
-          return token;
-        }
+        // If token expires in less than 2 minutes, refresh it proactively
+        if (expTime > 0 && expTime < currentTime + 120000) {
+          // Double-check that we haven't refreshed recently
+          const timeElapsed = currentTime - (token.lastRefreshed as number || 0);
+          if (timeElapsed < 30000) { // Don't refresh more than once every 30 seconds
+            return token;
+          }
 
-        if (token.refreshToken) {
-          console.log("Token expiring soon, refreshing proactively");
-          const refreshedToken = await refreshAccessToken(token);
-          refreshedToken.lastRefreshed = currentTime;
-          return refreshedToken;
+          if (token.refreshToken) {
+            console.log("Token expiring soon, refreshing proactively");
+            const refreshedToken = await refreshAccessToken(token);
+            if (refreshedToken) { // Add null check
+              refreshedToken.lastRefreshed = currentTime;
+              return refreshedToken;
+            }
+          }
         }
       }
 
-      return token;
+      return token || {}; // Return empty object if token is null/undefined
     },
+    // Update the session callback with proper null checks
     async session({ session, token }) {
-      if (session.user) {
+      if (session && session.user && token) {
         session.user.accessToken = token.accessToken;
         session.user.refreshToken = token.refreshToken;
         session.user.expiration = token.expiration;
       }
       
       // If there was an error refreshing the token, redirect to sign in
-      if (token.error) {
+      if (token && token.error) {
         return null; // Force re-authentication
       }
       

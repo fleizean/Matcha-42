@@ -207,7 +207,7 @@ const Match = () => {
       // This endpoint would return the liked status for multiple profiles in one request
       // You might need to implement this endpoint on your backend
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/liked-status`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/liked-status`,
         {
           method: 'POST',
           headers: {
@@ -296,22 +296,17 @@ const Match = () => {
     if (profiles.length === 0 || !session?.user?.accessToken) return;
     
     // For now, use the individual checks directly since the batch endpoint might not exist yet
-    checkLikedProfilesIndividually();
+    //checkLikedProfilesIndividually();
     
     // When you implement the batch endpoint, you can use this code instead:
-    /*
     const newProfileIds = profiles
-      .filter(profile => !loadedProfileIds.has(profile.id))
       .map(profile => profile.id);
-      
-    if (newProfileIds.length > 0) {
       // Try batch API first
-      fetchLikedStatus(newProfileIds).catch(() => {
-        // Fall back to individual requests if batch fails
-        checkLikedProfilesIndividually();
-      });
-    }
-    */
+    fetchLikedStatus(newProfileIds).catch(() => {
+      // Fall back to individual requests if batch fails
+      checkLikedProfilesIndividually();
+    });
+    
   }, [profiles, session]);
 
   // Fetch user profile information
