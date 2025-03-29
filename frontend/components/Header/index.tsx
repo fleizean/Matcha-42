@@ -144,12 +144,7 @@ const Header = () => {
             id: notification.id,
             type: notification.type,
             message,
-            time: new Date(notification.created_at).toLocaleString('tr-TR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              day: '2-digit',
-              month: '2-digit'
-            }),
+            time: notification.created_at,
             read: notification.is_read,
             sender_id: notification.sender_id,
             sender_username: notification.sender_username
@@ -393,30 +388,39 @@ const Header = () => {
     }
   };
 
-  const formatTimestamp = (timestamp: string): string => {
+    const formatTimestamp = (timestamp: string): string => {
     try {
       if (!timestamp) return "";
       
-      // First check if it's already formatted like "DD/MM HH:MM"
+      // İlk olarak zaten formatlanmış mı kontrol et
       if (/^\d{1,2}\/\d{1,2}\s\d{1,2}:\d{1,2}$/.test(timestamp)) {
-        return timestamp; // Return as is if already formatted
+        return timestamp; // Zaten formatlanmışsa doğrudan döndür
       }
       
-      // Try to parse the timestamp
-      const date = new Date(timestamp);
+      // ISO formatını UTC olarak ayrıştır
+      const utcDate = new Date(timestamp);
       
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
+      // Geçerli bir tarih mi kontrol et
+      if (isNaN(utcDate.getTime())) {
         console.error('Invalid date format:', timestamp);
-        return timestamp; // Return original timestamp instead of empty string
+        return timestamp; // Geçersiz tarih ise orijinalini döndür
       }
       
+      // UTC saatini Türkiye saatine çevir (UTC+3)
+      const trTimeMS = utcDate.getTime() + (6 * 60 * 60 * 1000);
+      const trDate = new Date(trTimeMS);
+      
+      // Şimdiki zamanı da Türkiye saatine çevir
       const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
+      const trNow = new Date(now.getTime() + (3 - (now.getTimezoneOffset() / 60)) * 60 * 60 * 1000);
+      
+      // Zaman farkını hesapla
+      const diffMs = trNow.getTime() - trDate.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+      
+      // Kullanıcı dostu zaman formatı için
       if (diffMins < 1) {
         return "Az önce";
       } else if (diffMins < 60) {
@@ -426,23 +430,22 @@ const Header = () => {
       } else if (diffDays < 7) {
         return `${diffDays} gün önce`;
       } else {
-        // Format the date properly for older notifications
-        try {
-          return new Intl.DateTimeFormat('tr-TR', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-          }).format(date);
-        } catch (formattingError) {
-          console.error('Date formatting error:', formattingError);
-          // Fallback to a simpler format
-          return date.toLocaleDateString();
-        }
+        // Daha eski bildirimler için Türkçe tarih formatı (gün ay saat:dakika)
+        const day = trDate.getDate();
+        const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+        const month = monthNames[trDate.getMonth()];
+        const hours = trDate.getHours();
+        const minutes = trDate.getMinutes();
+        
+        // İki haneli saat ve dakika formatı
+        const formattedHours = hours < 10 ? `0${hours}` : hours;
+        const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+        
+        return `${day} ${month} ${formattedHours}:${formattedMinutes}`;
       }
     } catch (error) {
       console.error('Timestamp format error:', error, 'for timestamp:', timestamp);
-      return timestamp || ""; // Return original timestamp as fallback
+      return timestamp || ""; // Hata durumunda orijinal değeri döndür
     }
   };
 
