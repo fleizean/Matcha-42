@@ -307,7 +307,7 @@ async def create_message(
         )
     
     # Send message and create notification
-    result = await send_message_with_notification(conn, current_user["id"], recipient_id, content)
+    result = await send_message_with_notification(current_user["id"], recipient_id, content, conn)
     
     if not result:
         raise HTTPException(
