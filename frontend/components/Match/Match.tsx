@@ -667,7 +667,10 @@ const Match = () => {
   const sortProfiles = (profiles: SuggestedProfile[]): SuggestedProfile[] => {
     try {
 
-      if (!profiles || profiles.length === 0) return [];
+      if (!profiles || profiles.length === 0) { 
+        console.log("No profiles to sort");
+        return [];
+      }
       
       const sortedProfiles = [...profiles];
 

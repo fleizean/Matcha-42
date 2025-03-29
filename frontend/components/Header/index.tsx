@@ -271,6 +271,31 @@ const Header = () => {
     }
   };
 
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId: number) => {
+    if (!session?.user?.accessToken) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications/${notificationId}/read`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.user.accessToken}`,
+          }
+        }
+      );
+
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+        );
+        fetchNotificationCount();
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
 
   // Mark all notifications as read
   const markAllNotificationsAsRead = async () => {
@@ -458,27 +483,15 @@ const getNotificationIcon = (type: string) => {
     }
   };
 
-    // WebSocket effect'ini güncelle
   useEffect(() => {
     if (session?.user?.accessToken) {
       const wsService = WebSocketService.getInstance();
       wsService.connect(process.env.NEXT_PUBLIC_BACKEND_API_URL, session.user.accessToken);
   
-      // İlk bağlantıda notification count'u çek
-      fetchNotificationCount();
-  
       // Bildirimleri dinle
       const handleNotification = (data: any) => {
         setNotifications((prev) => [data, ...prev]);
         setNotificationCount((prev) => prev + 1);
-        
-        // Bildirim geldiğinde toast göster
-        toast.custom((t) => (
-          <div className="bg-[#2C2C2E] text-white p-4 rounded-lg shadow-lg">
-            {getNotificationIcon(data.type)}
-            <p>{formatNotificationMessage(data)}</p>
-          </div>
-        ));
       };
   
       wsService.addNotificationHandler(handleNotification);
@@ -489,33 +502,6 @@ const getNotificationIcon = (type: string) => {
       };
     }
   }, [session]);
-  
-  // markNotificationAsRead fonksiyonunu güncelle
-  const markNotificationAsRead = async (notificationId: number) => {
-    if (!session?.user?.accessToken) return;
-  
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications/${notificationId}/read`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.user.accessToken}`,
-          }
-        }
-      );
-  
-      if (response.ok) {
-        setNotifications(prev =>
-          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-        );
-        // Count'u azalt
-        setNotificationCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -532,7 +518,6 @@ const getNotificationIcon = (type: string) => {
   }, []);
 
   // Fetch notification count on initial load
-
 
   // Add notification bell to mobile menu
   const toggleMobileNotifications = () => {

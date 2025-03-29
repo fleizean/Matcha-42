@@ -36,6 +36,17 @@ export default withAuth(
     const authPages = ["/signin", "/signup", "/forgot-password"];
     const isAuthPage = authPages.includes(req.nextUrl.pathname);
     const token = req.nextauth?.token;
+    
+    // Korunan sayfaları kontrol et (chat ve diğerleri)
+    const protectedPages = ["/match", "/settings", "/chat", "/first-time"];
+    const isProtectedPage = protectedPages.some(page => 
+      req.nextUrl.pathname === page || req.nextUrl.pathname.startsWith(`${page}/`)
+    );
+
+    // Token yoksa ve korunan bir sayfadaysa, giriş sayfasına yönlendir
+    if (isProtectedPage && !token) {
+      return NextResponse.redirect(new URL("/signin", req.url));
+    }
 
     // Profile path handling
     if (req.nextUrl.pathname.startsWith('/profile')) {
@@ -65,7 +76,7 @@ export default withAuth(
           }
 
           const result = await profileCheckResponse.json();
-          if (!result.exists) {  // API artık { exists: true } döndürüyor
+          if (!result.exists) {
             return NextResponse.redirect(new URL("/404", req.url));
           }
         } catch (error) {
@@ -148,6 +159,7 @@ export const config = {
     "/forgot-password",
     "/profile/:path*",
     "/settings",
-    "/chat"
+    "/chat",
+    "/chat/:path*",
   ]
 };
