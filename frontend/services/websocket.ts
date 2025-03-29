@@ -16,6 +16,7 @@ class WebSocketService {
   private initializing: boolean = false;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+  private notificationHandlers: ((data: any) => void)[] = [];
 
   // Create a singleton instance
   private static instance: WebSocketService | null = null;
@@ -199,6 +200,15 @@ class WebSocketService {
       }
     });
   }
+
+  addNotificationHandler(handler: (data: any) => void) {
+    this.notificationHandlers.push(handler);
+  }
+
+  removeNotificationHandler(handler: (data: any) => void) {
+    this.notificationHandlers = this.notificationHandlers.filter(h => h !== handler);
+  }
+
 
   private handleMessage(event: MessageEvent): void {
     try {
