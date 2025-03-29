@@ -1,5 +1,4 @@
 import re
-from unidecode import unidecode
 
 def validate_username(username):
     if not username:
@@ -8,8 +7,18 @@ def validate_username(username):
     if len(username) < 3 or len(username) > 30:
         return False, "Kullanıcı adı 3 ile 30 karakter arasında olmalıdır"
     
+    # Turkish character mapping
+    turkish_map = {
+        'ğ': 'g', 'Ğ': 'G',
+        'ü': 'u', 'Ü': 'U',
+        'ş': 's', 'Ş': 'S',
+        'ı': 'i', 'İ': 'I',
+        'ö': 'o', 'Ö': 'O',
+        'ç': 'c', 'Ç': 'C'
+    }
+    
     # Convert Turkish characters to ASCII equivalents
-    normalized = unidecode(username)
+    normalized = ''.join(turkish_map.get(char, char) for char in username)
     
     # Check if contains only allowed characters
     if not normalized.isalnum():
