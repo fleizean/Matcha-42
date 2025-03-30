@@ -22,7 +22,6 @@ interface BlockStatus {
   blocker_id: string | null;
 }
 
-
 interface ChatUser {
   id: string;
   name: string;
@@ -139,7 +138,6 @@ const ChatPage = () => {
     };
   }, [session, activeChat]);
 
-
   useEffect(() => {
     if (activeChat) {
       fetchMessages(activeChat);
@@ -232,7 +230,6 @@ const ChatPage = () => {
         fetchConversations();
       }
     };
-
 
     const handleWsConnect = () => {
       console.log('WebSocket connected successfully');
@@ -385,8 +382,6 @@ const ChatPage = () => {
       toast.error('Konuşmalar yüklenemedi');
 
       router.replace('/chat');
-
-
     } finally {
       setIsLoading(false);
     }
@@ -591,6 +586,53 @@ const ChatPage = () => {
     }
   }, [activeChat, conversations]);
 
+  useEffect(() => {
+    // Make sure both session and conversations are available before proceeding
+    if (session?.user?.accessToken && conversations.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const userIdFromUrl = params.get('user');
+      
+      // If URL has a user parameter, find that conversation
+      if (userIdFromUrl) {
+        const urlConversation = conversations.find(c => c.user.id === userIdFromUrl);
+        
+        if (urlConversation) {
+          // Set active chat and fetch messages
+          setActiveChat(userIdFromUrl);
+          
+          // Set active chat user data
+          setActiveChatUser({
+            id: urlConversation.user.id,
+            name: `${urlConversation.user.first_name} ${urlConversation.user.last_name}`,
+            avatar: urlConversation.profile_picture || '/images/defaults/man-default.png',
+            lastMessage: urlConversation.recent_message?.content || 'Henüz mesaj yok',
+            lastMessageTime: urlConversation.recent_message
+              ? formatTimestamp(urlConversation.recent_message.created_at)
+              : '',
+            isOnline: urlConversation.user.is_online,
+            unreadCount: urlConversation.unread_count
+          });
+        }
+      }
+      // If no user in URL and no active chat yet, select the first conversation
+      else if (!activeChat) {
+        setActiveChat(conversations[0].user.id);
+        
+        setActiveChatUser({
+          id: conversations[0].user.id,
+          name: `${conversations[0].user.first_name} ${conversations[0].user.last_name}`,
+          avatar: conversations[0].profile_picture || '/images/defaults/man-default.png',
+          lastMessage: conversations[0].recent_message?.content || 'Henüz mesaj yok',
+          lastMessageTime: conversations[0].recent_message
+            ? formatTimestamp(conversations[0].recent_message.created_at)
+            : '',
+          isOnline: conversations[0].user.is_online,
+          unreadCount: conversations[0].unread_count
+        });
+      }
+    }
+  }, [session, conversations]);
+
   // İlk olarak conversations bağımlılığını ekleyelim
   useEffect(() => {
     // İlk yükleme sırasında URL'yi kontrol et
@@ -660,9 +702,6 @@ const ChatPage = () => {
 
     checkUrlBlockStatus();
   }, [conversations]);
-
-
-
 
   const handleBlock = () => {
     setShowBlockModal(true);
@@ -1183,8 +1222,6 @@ const ChatPage = () => {
             </div>
           )}
 
-
-
           {/* Chat Area */}
           <div className={`${activeChat ? 'block' : 'hidden lg:block'} flex-1 flex flex-col h-full`}>
             {activeChat ? (
@@ -1287,7 +1324,6 @@ const ChatPage = () => {
                           messages.map((message) => {
                             // Use currentUserId instead of session.user.id
                             const isCurrentUser = currentUserId && String(message.sender_id) === String(currentUserId);
-
 
                             return (
                               <motion.div
