@@ -853,55 +853,63 @@ const ChatPage = () => {
     }
   };
 
-      const formatTimestamp = (timestamp: string) => {
-      try {
-        if (!timestamp) return "";
+  const formatTimestamp = (timestamp: string): string => {
+    try {
+      if (!timestamp) return "";
       
-        // ISO formatını UTC olarak ayrıştır
-        const utcDate = new Date(timestamp);
+      let msgDate: Date;
+      
+      // Backend formatındaki postgresSQL timestamp+timezone formatı (2025-03-31 00:54:09.981732+03)
+      if (timestamp.includes(' ') && timestamp.match(/\+\d{2}$/)) {
+        // Backend formatı (PostgreSQL timestamp with timezone)
+        const parts = timestamp.split(' ');
+        const datePart = parts[0];
+        const timePart = parts[1].split('.')[0]; // Microseconds'ı kaldır
         
-        // Geçerli bir tarih mi kontrol et
-        if (isNaN(utcDate.getTime())) {
-          console.warn("Invalid timestamp format:", timestamp);
-          return "";
-        }
-        
-        // UTC saatini Türkiye saatine çevir (UTC+3)
-        // UTC zamanını milisaniye olarak al ve 3 saat ekle
-        const trTimeMS = utcDate.getTime() + (6 * 60 * 60 * 1000);
-        const trDate = new Date(trTimeMS);
-        
-        // Şimdiki zamanı Türkiye saati olarak alalım
-        const now = new Date();
-        const trNow = new Date(now.getTime() + (3 - (now.getTimezoneOffset() / 60)) * 60 * 60 * 1000);
-        
-        // Aynı gün içinde olup olmadığını kontrol et
-        const isSameDay =
-          trDate.getUTCDate() === trNow.getUTCDate() &&
-          trDate.getUTCMonth() === trNow.getUTCMonth() &&
-          trDate.getUTCFullYear() === trNow.getUTCFullYear();
-        
-        // Türkiye saati için saat ve dakikayı al
-        const hours = trDate.getUTCHours();
-        const minutes = trDate.getUTCMinutes();
-        
-        if (isSameDay) {
-          // Aynı gün içindeyse sadece saat ve dakika
-          return `${padZero(hours)}:${padZero(minutes)}`;
-        } else {
-          // Farklı gün ise tarih ve saat
-          const dayStr = trDate.getUTCDate();
-          const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-          const monthStr = monthNames[trDate.getUTCMonth()];
-          
-          return `${dayStr} ${monthStr} ${padZero(hours)}:${padZero(minutes)}`;
-        }
-      } catch (error) {
-        console.error('Timestamp format error:', error);
-        console.error('Invalid timestamp:', timestamp);
+        // ISO benzeri bir string oluştur
+        const isoString = `${datePart}T${timePart}`;
+        msgDate = new Date(isoString);
+      } else {
+        // Frontend formatı ISO string (2025-03-30T21:54:09.981732+00:00)
+        msgDate = new Date(timestamp);
+      }
+      
+      // Geçerli bir tarih mi kontrol et
+      if (isNaN(msgDate.getTime())) {
+        console.error('Invalid date format:', timestamp);
         return "";
       }
-    };
+      
+      // Şimdiki zamanı al
+      const now = new Date();
+      
+      // Aynı gün içinde olup olmadığını kontrol et
+      const isSameDay = 
+        msgDate.getDate() === now.getDate() &&
+        msgDate.getMonth() === now.getMonth() &&
+        msgDate.getFullYear() === now.getFullYear();
+      
+      // Yerel saat ve dakikayı al
+      const hours = msgDate.getHours();
+      const minutes = msgDate.getMinutes();
+      
+      if (isSameDay) {
+        // Aynı gün içindeyse sadece saat ve dakika
+        return `${padZero(hours)}:${padZero(minutes)}`;
+      } else {
+        // Farklı gün ise tarih ve saat
+        const dayStr = msgDate.getDate();
+        const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+        const monthStr = monthNames[msgDate.getMonth()];
+        
+        return `${dayStr} ${monthStr} ${padZero(hours)}:${padZero(minutes)}`;
+      }
+    } catch (error) {
+      console.error('Timestamp format error:', error);
+      console.error('Invalid timestamp:', timestamp);
+      return "";
+    }
+  };
     
     // Sayılara sıfır ekleyen yardımcı fonksiyon
     const padZero = (num: number): string => {

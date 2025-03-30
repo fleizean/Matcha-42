@@ -387,7 +387,7 @@ const Header = () => {
     }
   };
 
-    const formatTimestamp = (timestamp: string): string => {
+  const formatTimestamp = (timestamp: string): string => {
     try {
       if (!timestamp) return "";
       
@@ -396,9 +396,28 @@ const Header = () => {
         return timestamp; // Zaten formatlanmışsa doğrudan döndür
       }
       
-      // ISO formatını UTC olarak ayrıştır
-      const raw = timestamp.endsWith("Z") ? timestamp : `${timestamp}Z`;
-      const utcDate = new Date(raw);
+      let utcDate: Date;
+      
+      // Backend formatındaki postgresSQL timestamp+timezone formatı (2025-03-31 00:54:09.981732+03)
+      if (timestamp.includes(' ') && timestamp.match(/\+\d{2}$/)) {
+        // Backend formatı
+        const parts = timestamp.split(' ');
+        const datePart = parts[0];
+        const timePart = parts[1].split('.')[0]; // Microseconds'ı kaldır
+        
+        // Zaman dilimi bilgisi çıkar ve daha sonra bunu hesaplamada kullan
+        const tzOffset = parseInt(timestamp.slice(-2));
+        
+        // ISO benzeri bir string oluştur
+        const isoString = `${datePart}T${timePart}`;
+        utcDate = new Date(isoString);
+        
+        // Zaman dilimi offsetini düzelt
+        utcDate.setHours(utcDate.getHours() - tzOffset);
+      } else {
+        // Frontend formatı ISO string (2025-03-30T21:54:09.981732+00:00)
+        utcDate = new Date(timestamp);
+      }
       
       // Geçerli bir tarih mi kontrol et
       if (isNaN(utcDate.getTime())) {
@@ -406,15 +425,11 @@ const Header = () => {
         return timestamp; // Geçersiz tarih ise orijinalini döndür
       }
       
-      // UTC saatini Türkiye saatine çevir (UTC+3)
-      const trDate = utcDate;
-      
-      // Şimdiki zamanı da Türkiye saatine çevir
+      // Şimdiki zamanı al
       const now = new Date();
-      const trNow = now;
       
       // Zaman farkını hesapla
-      const diffMs = trNow.getTime() - trDate.getTime();
+      const diffMs = now.getTime() - utcDate.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -430,11 +445,11 @@ const Header = () => {
         return `${diffDays} gün önce`;
       } else {
         // Daha eski bildirimler için Türkçe tarih formatı (gün ay saat:dakika)
-        const day = trDate.getDate();
+        const day = utcDate.getDate();
         const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-        const month = monthNames[trDate.getMonth()];
-        const hours = trDate.getHours();
-        const minutes = trDate.getMinutes();
+        const month = monthNames[utcDate.getMonth()];
+        const hours = utcDate.getHours();
+        const minutes = utcDate.getMinutes();
         
         // İki haneli saat ve dakika formatı
         const formattedHours = hours < 10 ? `0${hours}` : hours;
