@@ -700,7 +700,7 @@ async def get_suggested(
         tags: Optional[List[str]] = Query(
         None, 
         description="List of tags to filter by",
-        example=["music", "kitap"],  # Add example
+        example=["music", "kitap"],
         openapi_examples={
             "single_tag": {
                 "summary": "Single tag filter",
@@ -718,26 +718,26 @@ async def get_suggested(
     """
     Get suggested profiles with age-based filtering
     """
+    # Get user's profile
+    profile = await conn.fetchrow("""
+    SELECT id, is_complete FROM profiles
+    WHERE user_id = $1
+    """, current_user["id"])
+    
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profil bulunamadı"
+        )
+    
+    # Check if profile is complete
+    if not profile["is_complete"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Lütfen profilinizi tamamlayın"
+        )
+    
     try:
-        # Get user's profile
-        profile = await conn.fetchrow("""
-        SELECT id, is_complete FROM profiles
-        WHERE user_id = $1
-        """, current_user["id"])
-        
-        if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Profil bulunamadı"
-            )
-        
-        # Check if profile is complete
-        if not profile["is_complete"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Lütfen profilinizi tamamlayın"
-            )
-        
         # Get suggested profiles with filters
         suggested = await get_suggested_profiles(
             conn=conn,
