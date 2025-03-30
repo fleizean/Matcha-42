@@ -59,6 +59,10 @@ const SigninPage = () => {
       });
     
       if (!result?.ok) {
+        if (result?.error === "CredentialsSignin") {
+          toast.error("Sunucuda bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+          return;
+        }
         toast.error(result.error || "Giriş sırasında bir hata oluştu.");
         return;
       }

@@ -94,6 +94,9 @@ const Match = () => {
   };
 
   const initialValues = getInitialFilterValues();
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const initialLoadRef = useRef(true);
+  const visibilityChangeHandledRef = useRef(false);
 
   const [ageRange, setAgeRange] = useState([DEFAULT_MIN_AGE, DEFAULT_MAX_AGE]);
   const [fameRating, setFameRating] = useState([DEFAULT_MIN_FAME, DEFAULT_MAX_FAME]);
@@ -209,11 +212,30 @@ const Match = () => {
     router.push(`/match${url}`, { scroll: false });
   };
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = document.visibilityState === "visible";
+      setIsPageVisible(isVisible);
+      
+      if (isVisible && !initialLoadRef.current && !visibilityChangeHandledRef.current) {
+        // Sadece sekme değişiminden geri dönüşlerde işlem yap
+        visibilityChangeHandledRef.current = true;
+        setTimeout(() => {
+          visibilityChangeHandledRef.current = false;
+        }, 1000);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   // Initialize data on first load - immediately fetch profiles
   useEffect(() => {
     const initializeData = async () => {
       if (session?.user?.accessToken) {
         setIsLoading(true);
+        initialLoadRef.current = true;
         // Fetch user profile first
         await fetchUserProfile();
 
@@ -223,6 +245,7 @@ const Match = () => {
         setProfiles([]);
         await fetchProfiles();
         setIsInitialLoad(false);
+        initialLoadRef.current = false;
       }
     };
 
@@ -280,7 +303,7 @@ const Match = () => {
     // Only respond to filter changes after initial load and when filters change
     if (!isInitialLoad && session?.user?.accessToken && filtersApplied) {
       setIsLoading(true);
-      setPage(0);
+      setPage(0); 
       setLoadedProfileIds(new Set());
       setProfiles([]);
       fetchProfiles();
@@ -542,17 +565,29 @@ const Match = () => {
       }
   
       const data = await response.json();
+
+      
   
       // Filter out profiles we've already loaded
-      const uniqueNewProfiles = data.filter((profile: SuggestedProfile) =>
-        !loadedProfileIds.has(profile.id)
-      );
-  
-      if (uniqueNewProfiles.length === 0) {
-        setHasMore(false);
-        return;
+      if (document.visibilityState === "visible" && !initialLoadRef.current) {
+        setLoadedProfileIds(new Set());
+      }
+
+      // Filter out profiles only if it's not a tab switch return
+      let uniqueNewProfiles = data;
+      if (loadedProfileIds.size > 0) {
+        uniqueNewProfiles = data.filter((profile: SuggestedProfile) =>
+          !loadedProfileIds.has(profile.id)
+        );
       }
   
+      if (uniqueNewProfiles.length === 0 && data.length > 0) {
+        // Eğer tüm profiller zaten yüklenmişse ve veri boş değilse
+        // Filtrelemeyi atla ve doğrudan gelen verileri kullan
+        uniqueNewProfiles = data;
+        setLoadedProfileIds(new Set());
+      }
+      
       // Update the set of profile IDs we've loaded
       const updatedProfileIds = new Set(loadedProfileIds);
       uniqueNewProfiles.forEach((profile: SuggestedProfile) => {
@@ -560,7 +595,7 @@ const Match = () => {
       });
       setLoadedProfileIds(updatedProfileIds);
   
-      // Update the profiles state, adding new profiles to existing ones
+      // Update the profiles state
       setProfiles(prev => page === 0 ? uniqueNewProfiles : [...prev, ...uniqueNewProfiles]);
       setHasMore(data.length === 10);
   

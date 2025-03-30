@@ -398,7 +398,8 @@ const Header = () => {
       }
       
       // ISO formatını UTC olarak ayrıştır
-      const utcDate = new Date(timestamp);
+      const raw = timestamp.endsWith("Z") ? timestamp : `${timestamp}Z`;
+      const utcDate = new Date(raw);
       
       // Geçerli bir tarih mi kontrol et
       if (isNaN(utcDate.getTime())) {
@@ -407,12 +408,11 @@ const Header = () => {
       }
       
       // UTC saatini Türkiye saatine çevir (UTC+3)
-      const trTimeMS = utcDate.getTime() + (6 * 60 * 60 * 1000);
-      const trDate = new Date(trTimeMS);
+      const trDate = utcDate;
       
       // Şimdiki zamanı da Türkiye saatine çevir
       const now = new Date();
-      const trNow = new Date(now.getTime() + (3 - (now.getTimezoneOffset() / 60)) * 60 * 60 * 1000);
+      const trNow = now;
       
       // Zaman farkını hesapla
       const diffMs = trNow.getTime() - trDate.getTime();

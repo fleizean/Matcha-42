@@ -8,12 +8,12 @@ const Hero = () => {
     <>
       <section
         id="home"
-        className="relative z-10 overflow-hidden pb-16 pt-[120px] md:pb-[120px] md:pt-[150px] xl:pb-[160px] xl:pt-[180px] 2xl:pb-[200px] 2xl:pt-[210px]"
+        className="relative z-10 overflow-hidden pb-16 pt-[120px] md:pb-[170px] md:pt-[150px] xl:pb-[220px] xl:pt-[180px] 2xl:pb-[200px] 2xl:pt-[210px]"
       >
         {/* Background Image */}
         <div className="absolute inset-0 z-[-2]">
           <Image
-            src="/images/hero/hero-1.webp"
+            src="/images/hero/hero-2.webp"
             alt="Hero Background"
             fill
             className="object-cover object-center"
