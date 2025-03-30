@@ -1,5 +1,4 @@
-# app/api/realtime.py
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
 from typing import Dict, Any
 import json
@@ -115,7 +114,7 @@ async def websocket_endpoint(
                     message = await send_message(conn, user["id"], recipient_id, content)
                     
                     if message:
-                        logger.info(f"✅ Message saved in database")
+                        logger.info("✅ Message saved in database")
                         
                         # Get sender info
                         sender = await conn.fetchrow("""
@@ -150,7 +149,7 @@ async def websocket_endpoint(
                             
                             # If we couldn't get the timestamp, use the current time
                             if timestamp is None:
-                                timestamp = datetime.utcnow().isoformat()
+                                timestamp = datetime.now(timezone.utc).isoformat()
                                 
                             # Send with proper timestamp
                             await manager.send_personal_message({
@@ -202,7 +201,7 @@ async def broadcast_notification(
                 "type": "notification",
                 "data": {
                     "type": notification_type,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             }
             

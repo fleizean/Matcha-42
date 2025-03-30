@@ -13,12 +13,11 @@ CREATE TABLE IF NOT EXISTS users (
     verification_token VARCHAR(255),
     reset_password_token VARCHAR(255),
     refresh_token VARCHAR(255),
-    refresh_token_expires TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP,
+    refresh_token_expires TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_online TIMESTAMP WITH TIME ZONE,
     is_online BOOLEAN DEFAULT FALSE,
-    last_online TIMESTAMP,
     latitude FLOAT,
     longitude FLOAT
 );
@@ -35,8 +34,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     fame_rating FLOAT DEFAULT 0.0,
     is_complete BOOLEAN DEFAULT FALSE,
     birth_date TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Profile pictures table
@@ -46,14 +45,14 @@ CREATE TABLE IF NOT EXISTS profile_pictures (
     file_path VARCHAR(255) NOT NULL,
     backend_url VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tags table
 CREATE TABLE IF NOT EXISTS tags (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Profile tags association table
@@ -68,7 +67,7 @@ CREATE TABLE IF NOT EXISTS likes (
     id SERIAL PRIMARY KEY,
     liker_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     liked_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (liker_id, liked_id)
 );
 
@@ -77,7 +76,7 @@ CREATE TABLE IF NOT EXISTS visits (
     id SERIAL PRIMARY KEY,
     visitor_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     visited_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Blocks table
@@ -85,7 +84,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     id SERIAL PRIMARY KEY,
     blocker_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     blocked_id VARCHAR(36) NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (blocker_id, blocked_id)
 );
 
@@ -97,8 +96,8 @@ CREATE TABLE IF NOT EXISTS reports (
     reason TEXT NOT NULL,
     description TEXT,
     is_resolved BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Connections table (for matches)
@@ -107,8 +106,8 @@ CREATE TABLE IF NOT EXISTS connections (
     user1_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     user2_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user1_id, user2_id)
 );
 
@@ -120,8 +119,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     type VARCHAR(20) NOT NULL CHECK (type IN ('like', 'unlike', 'match', 'unmatch', 'visit', 'message')),
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    read_at TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Messages table
@@ -131,8 +130,8 @@ CREATE TABLE IF NOT EXISTS messages (
     recipient_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    read_at TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Add indexes for improved performance

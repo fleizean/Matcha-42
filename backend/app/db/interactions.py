@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.db.profiles import update_fame_rating
 from app.db.realtime import create_notification
@@ -36,7 +36,7 @@ async def like_profile(conn, liker_id, liked_id):
     INSERT INTO likes (liker_id, liked_id, created_at)
     VALUES ($1, $2, $3)
     RETURNING id
-    """, liker_id, liked_id, datetime.utcnow())
+    """, liker_id, liked_id, datetime.now(timezone.utc))
 
     # Get user IDs for both profiles
     liker_user_id = await conn.fetchval("SELECT user_id FROM profiles WHERE id = $1", liker_id)
@@ -87,7 +87,7 @@ async def like_profile(conn, liker_id, liked_id):
                 UPDATE connections
                 SET is_active = true, updated_at = $2
                 WHERE id = $1
-                """, existing_conn['id'], datetime.utcnow())
+                """, existing_conn['id'], datetime.now(timezone.utc))
                 
                 # Create match notifications for reconnection
                 await create_notification(
@@ -112,7 +112,7 @@ async def like_profile(conn, liker_id, liked_id):
                     content=f"{liker_user['first_name']} ile yeniden eşleştiniz! Şimdi sohbet edebilirsiniz.")
         else:
             # Create new connection
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             await conn.fetchval("""
             INSERT INTO connections (user1_id, user2_id, is_active, created_at, updated_at)
             VALUES ($1, $2, true, $3, $3)
@@ -207,7 +207,7 @@ async def unlike_profile(conn, liker_id, liked_id):
         UPDATE connections
         SET is_active = false, updated_at = $3
         WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
-        """, liker_user_id, liked_user_id, datetime.utcnow())
+        """, liker_user_id, liked_user_id, datetime.now(timezone.utc))
         
         # Create unmatch notifications for both users
         await create_notification(
@@ -259,7 +259,7 @@ async def visit_profile(conn, visitor_id, visited_id):
         return None
     
     # Record the visit
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     visit_id = await conn.fetchval("""
     INSERT INTO visits (visitor_id, visited_id, created_at)
     VALUES ($1, $2, $3)
@@ -433,7 +433,7 @@ async def report_profile(conn, reporter_id, reported_id, reason, description=Non
     INSERT INTO reports (reporter_id, reported_id, reason, description, is_resolved, created_at)
     VALUES ($1, $2, $3, $4, false, $5)
     RETURNING id
-    """, reporter_id, reported_id, reason, description, datetime.utcnow())
+    """, reporter_id, reported_id, reason, description, datetime.now(timezone.utc))
     
     return report_id
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from fastapi.responses import JSONResponse
 from typing import List, Optional
@@ -112,7 +112,7 @@ async def update_my_profile(
     
     # Add updated_at field
     update_fields.append(f"updated_at = ${param_idx}")
-    params.append(datetime.utcnow())
+    params.append(datetime.now(timezone.utc))
     param_idx += 1
     
     # Check if profile would be complete after this update
@@ -293,7 +293,7 @@ async def update_my_tags(
         UPDATE profiles
         SET is_complete = $2, updated_at = $3
         WHERE id = $1
-        """, profile["id"], is_complete, datetime.utcnow())
+        """, profile["id"], is_complete, datetime.now(timezone.utc))
     
     # Get updated profile
     updated_profile = await conn.fetchrow("""
@@ -372,7 +372,7 @@ async def update_location(
     UPDATE profiles
     SET latitude = $2, longitude = $3, updated_at = $4
     WHERE id = $1
-    """, profile["id"], latitude, longitude, datetime.utcnow())
+    """, profile["id"], latitude, longitude, datetime.now(timezone.utc))
     
     # Check if profile would be complete after this update
     pic_count = await conn.fetchval("""
@@ -533,7 +533,7 @@ async def upload_profile_picture(
     UPDATE profiles
     SET is_complete = $2, updated_at = $3
     WHERE id = $1
-    """, profile["id"], is_complete, datetime.utcnow())
+    """, profile["id"], is_complete, datetime.now(timezone.utc))
     
     return dict(picture)
 
@@ -683,7 +683,7 @@ async def delete_profile_picture(
         UPDATE profiles
         SET is_complete = $2, updated_at = $3
         WHERE id = $1
-        """, profile["id"], is_complete, datetime.utcnow())
+        """, profile["id"], is_complete, datetime.now(timezone.utc))
     
     return {"message": "Picture deleted successfully"}
 
@@ -827,7 +827,7 @@ async def get_profile(
             
             if visitor_profile:
                 # Check if a visit was recorded recently (last 5 minutes)
-                five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+                five_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
                 recent_visit = await conn.fetchval("""
                 SELECT id FROM visits
                 WHERE visitor_id = $1 AND visited_id = $2 AND created_at > $3
@@ -839,7 +839,7 @@ async def get_profile(
                     await conn.execute("""
                     INSERT INTO visits (visitor_id, visited_id, created_at)
                     VALUES ($1, $2, $3)
-                    """, visitor_profile["id"], profile_user["id"], datetime.utcnow())
+                    """, visitor_profile["id"], profile_user["id"], datetime.now(timezone.utc))
                     
                     # Create notification
                     await create_notification(conn, profile_user["user_id"], current_user["id"], "visit", f"{current_user['first_name']} profilinizi ziyaret etti!")

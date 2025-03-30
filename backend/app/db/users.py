@@ -1,7 +1,5 @@
-# app/db/users.py
-from math import e
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -11,7 +9,7 @@ async def get_user_by_id(conn, user_id):
     query = """
     SELECT id, username, email, first_name, last_name, 
            is_active, is_verified, is_online, last_online,
-           created_at, updated_at, last_login
+           created_at, updated_at
     FROM users
     WHERE id = $1
     """
@@ -22,7 +20,7 @@ async def get_user_by_username(conn, username):
     query = """
     SELECT id, username, email, first_name, last_name, 
            hashed_password, is_active, is_verified, is_online, last_online,
-           created_at, updated_at, last_login
+           created_at, updated_at
     FROM users
     WHERE username = $1
     """
@@ -33,7 +31,7 @@ async def get_user_by_email(conn, email):
     query = """
     SELECT id, username, email, first_name, last_name, 
            hashed_password, is_active, is_verified, is_online, last_online,
-           created_at, updated_at, last_login
+           created_at, updated_at
     FROM users
     WHERE email = $1
     """
@@ -76,7 +74,7 @@ async def update_user(conn, user_id, user_data):
 
     # Add updated_at field
     fields.append(f"updated_at = ${param_idx}")
-    values.append(datetime.utcnow())
+    values.append(datetime.now(timezone.utc))
 
     # If no fields to update, return early
     if not fields:
@@ -99,16 +97,16 @@ async def update_password(conn, user_id, hashed_password):
     WHERE id = $1
     RETURNING id
     """
-    return await conn.fetchval(query, user_id, hashed_password, datetime.utcnow())
+    return await conn.fetchval(query, user_id, hashed_password, datetime.now(timezone.utc))
 
 async def update_last_activity(conn, user_id, is_online):
     """Update user's last activity and online status"""
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if is_online:
         query = """
         UPDATE users
-        SET is_online = $2, last_login = $3
+        SET is_online = $2, last_online = $3
         WHERE id = $1
         RETURNING id
         """
@@ -130,12 +128,12 @@ async def update_verification(conn, token, is_verified=True):
     WHERE verification_token = $1
     RETURNING id, username, email
     """
-    return await conn.fetchrow(query, token, is_verified, datetime.utcnow())
+    return await conn.fetchrow(query, token, is_verified, datetime.now(timezone.utc))
 
 async def update_refresh_token(conn, user_id, refresh_token):
     """Update a user's refresh token"""
 
-    expires_at = datetime.utcnow() + timedelta(days=7)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     query = """
     UPDATE users
     SET refresh_token = $2, refresh_token_expires = $3

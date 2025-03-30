@@ -1,6 +1,7 @@
+import json
 from pydantic_settings import BaseSettings
 from typing import List
-from pydantic import EmailStr, AnyHttpUrl
+from pydantic import EmailStr, AnyHttpUrl, validator
 
 
 class Settings(BaseSettings):
@@ -10,6 +11,17 @@ class Settings(BaseSettings):
     
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+
+    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    def assemble_cors_origins(cls, v):
+        if isinstance(v, str):
+            try:
+                # Try to parse as JSON
+                return json.loads(v)
+            except json.JSONDecodeError:
+                # Fall back to comma-separated format
+                return [url.strip() for url in v.split(",")]
+        return v
 
     BACKEND_URL: str = "http://localhost:8000"
 
@@ -30,9 +42,6 @@ class Settings(BaseSettings):
     MAIL_TLS: bool = True
     MAIL_SSL: bool = False
     
-    # SQLAdmin credentials
-    ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD: str = "admin"
 
     FRONTEND_URL: str
     MEDIA_ROOT: str = "./media"

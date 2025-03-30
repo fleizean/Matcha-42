@@ -1,7 +1,6 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from pydantic import EmailStr
-from typing import List, Dict, Any
-import uuid
+from typing import Dict, Any
 from jinja2 import Environment, select_autoescape, PackageLoader
 
 from app.core.config import settings

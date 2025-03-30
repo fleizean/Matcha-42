@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 import uuid
 from app.core.security import verify_password, get_password_hash
@@ -14,7 +14,7 @@ async def authenticate_user(conn, username: str, password: str) -> Optional[Dict
     query = """
     SELECT id, username, email, first_name, last_name, 
            hashed_password, is_active, is_verified, is_online, last_online,
-           created_at, updated_at, last_login
+           created_at, updated_at
     FROM users
     WHERE username = $1
     """
@@ -25,7 +25,7 @@ async def authenticate_user(conn, username: str, password: str) -> Optional[Dict
         query = """
         SELECT id, username, email, first_name, last_name, 
                hashed_password, is_active, is_verified, is_online, last_online,
-               created_at, updated_at, last_login
+               created_at, updated_at
         FROM users
         WHERE email = $1
         """
@@ -40,10 +40,10 @@ async def authenticate_user(conn, username: str, password: str) -> Optional[Dict
     # Update online status
     update_query = """
     UPDATE users
-    SET is_online = true, last_login = $2
+    SET is_online = true, last_online = $2
     WHERE id = $1
     """
-    await conn.execute(update_query, user["id"], datetime.utcnow())
+    await conn.execute(update_query, user["id"], datetime.now(timezone.utc))
     
     return dict(user)
 
@@ -101,7 +101,7 @@ async def verify_user(conn, verification_token: str) -> Optional[Dict[str, Any]]
     RETURNING id, username, email, first_name, last_name, is_verified
     """
     
-    user = await conn.fetchrow(query, verification_token, datetime.utcnow())
+    user = await conn.fetchrow(query, verification_token, datetime.now(timezone.utc))
     
     if not user:
         return None
@@ -133,7 +133,7 @@ async def request_password_reset(conn, email: str) -> bool:
     WHERE id = $1
     """
     
-    await conn.execute(update_query, user["id"], reset_token, datetime.utcnow())
+    await conn.execute(update_query, user["id"], reset_token, datetime.now(timezone.utc))
     
     # Send password reset email
     await send_password_reset_email(email, user["username"], reset_token)
@@ -151,7 +151,7 @@ async def reset_password(conn, token: str, new_password: str) -> Optional[Dict[s
     RETURNING id, username, email, first_name, last_name
     """
     
-    user = await conn.fetchrow(query, token, get_password_hash(new_password), datetime.utcnow())
+    user = await conn.fetchrow(query, token, get_password_hash(new_password), datetime.now(timezone.utc))
     
     if not user:
         return None
@@ -184,7 +184,7 @@ async def change_password(conn, user_id: str, current_password: str, new_passwor
     RETURNING id, username, email, first_name, last_name
     """
     
-    updated_user = await conn.fetchrow(update_query, user_id, get_password_hash(new_password), datetime.utcnow())
+    updated_user = await conn.fetchrow(update_query, user_id, get_password_hash(new_password), datetime.now(timezone.utc))
     
     return dict(updated_user)
 
@@ -199,7 +199,7 @@ async def validate_refresh_token(conn, refresh_token: str) -> Optional[Dict[str,
     WHERE refresh_token = $1 AND refresh_token_expires > $2
     """
     
-    user = await conn.fetchrow(query, refresh_token, datetime.utcnow())
+    user = await conn.fetchrow(query, refresh_token, datetime.now(timezone.utc))
     
     if not user:
         return None

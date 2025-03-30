@@ -5,7 +5,7 @@ import requests
 import time
 from faker import Faker
 import asyncpg
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 import glob
 import uuid
@@ -181,20 +181,19 @@ async def create_fake_users_with_existing_pictures(count=50):
                 print("Creating user: ", username)
                 # Create user
                 user_id = str(uuid.uuid4())
-                now = datetime.utcnow()
-                last_login = now - timedelta(minutes=random.randint(1, 1440))
+                now = datetime.now(timezone.utc)
                 is_online = random.choice([True, False])
                 last_online = now - timedelta(minutes=random.randint(1, 1440))
                 
                 user_id = await conn.fetchval("""
                 INSERT INTO users (id, username, email, first_name, last_name, 
                                   hashed_password, is_active, is_verified, 
-                                  created_at, last_login, is_online, last_online)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                                  created_at, is_online, last_online)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 RETURNING id
                 """, user_id, username, email, first_name, last_name, 
                 get_password_hash(password), True, True, 
-                now, last_login, is_online, last_online)
+                now, is_online, last_online)
                 
                 # Create profile
                 profile_id = str(uuid.uuid4())
@@ -284,20 +283,19 @@ async def create_fake_users_with_ai_pictures(count=50):
                 
                 # Create user
                 user_id = str(uuid.uuid4())
-                now = datetime.utcnow()
-                last_login = now - timedelta(minutes=random.randint(1, 1440))
+                now = datetime.now(timezone.utc)
                 is_online = random.choice([True, False])
                 last_online = now - timedelta(minutes=random.randint(1, 1440))
                 
                 user_id = await conn.fetchval("""
                 INSERT INTO users (id, username, email, first_name, last_name, 
                                   hashed_password, is_active, is_verified, 
-                                  created_at, last_login, is_online, last_online)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                                  created_at, is_online, last_online)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 RETURNING id
                 """, user_id, username, email, first_name, last_name, 
                 get_password_hash(password), True, True, 
-                now, last_login, is_online, last_online)
+                now, is_online, last_online)
                 
                 # Create profile
                 profile_id = str(uuid.uuid4())
@@ -374,6 +372,6 @@ if __name__ == "__main__":
     import asyncio
     
     # Choose which function to run based on your needs
-    asyncio.run(create_fake_users_with_existing_pictures(3))
+    asyncio.run(create_fake_users_with_existing_pictures(250))
     # or
     # asyncio.run(create_fake_users_with_ai_pictures(200))

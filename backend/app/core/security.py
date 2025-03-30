@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -22,9 +22,9 @@ def get_password_hash(password: str) -> str:
 def create_access_token(subject: Any, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token"""
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -33,9 +33,9 @@ def create_access_token(subject: Any, expires_delta: Optional[timedelta] = None)
 def create_refresh_token(subject: Any, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT refresh token"""
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=7)  # 7 days by default
+        expire = datetime.now(timezone.utc) + timedelta(days=7)  # 7 days by default
     
     to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -73,7 +73,7 @@ async def get_current_user(
     query = """
     SELECT id, username, email, first_name, last_name, 
            is_active, is_verified, is_online, last_online,
-           created_at, updated_at, last_login
+           created_at, updated_at
     FROM users
     WHERE id = $1
     """
@@ -91,10 +91,10 @@ async def get_current_user(
     # Update last login timestamp
     query = """
     UPDATE users
-    SET last_login = $2
+    SET last_online = $2
     WHERE id = $1
     """
-    await conn.execute(query, user_id, datetime.utcnow())
+    await conn.execute(query, user_id, datetime.now(timezone.utc))
     
     return dict(user)
 

@@ -52,7 +52,6 @@ interface UserApiResponse {
   last_name: string;
   created_at: string;
   updated_at: string;
-  last_login: string;
   is_online: boolean;
   last_online: string;
   is_verified: boolean;

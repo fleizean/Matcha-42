@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.utils.geolocation import get_bounding_box, haversine_distance
 
@@ -62,7 +62,7 @@ async def update_profile(conn, profile_id, profile_data):
 
     # Add updated_at field
     fields.append(f"updated_at = ${param_idx}")
-    values.append(datetime.utcnow())
+    values.append(datetime.now(timezone.utc))
 
     # If no fields to update, return early
     if not fields:
@@ -244,7 +244,7 @@ async def update_fame_rating(conn, profile_id):
     WHERE id = $1
     RETURNING fame_rating
     """
-    return await conn.fetchval(query, profile_id, fame_rating, datetime.utcnow())
+    return await conn.fetchval(query, profile_id, fame_rating, datetime.now(timezone.utc))
 
 async def get_suggested_profiles(
     conn, 
@@ -348,13 +348,13 @@ async def get_suggested_profiles(
     
     # Add age filters
     if min_age is not None:
-        max_birth_date = datetime.utcnow() - timedelta(days=min_age*365.25)
+        max_birth_date = datetime.now(timezone.utc) - timedelta(days=min_age*365.25)
         where_parts.append(f"p.birth_date <= ${param_idx}")
         params.append(max_birth_date)
         param_idx += 1
     
     if max_age is not None:
-        min_birth_date = datetime.utcnow() - timedelta(days=(max_age+1)*365.25)
+        min_birth_date = datetime.now(timezone.utc) - timedelta(days=(max_age+1)*365.25)
         where_parts.append(f"p.birth_date >= ${param_idx}")
         params.append(min_birth_date)
         param_idx += 1
@@ -444,7 +444,7 @@ async def get_suggested_profiles(
             
             # Calculate age
             if profile['birth_date']:
-                today = datetime.utcnow()
+                today = datetime.now(timezone.utc)
                 birth_date = profile['birth_date']
                 age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
                 profile_dict['age'] = age

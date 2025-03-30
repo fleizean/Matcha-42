@@ -1,6 +1,6 @@
 from typing import Any
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -196,7 +196,7 @@ async def refresh_token_endpoint(
     SELECT id FROM users
     WHERE refresh_token = $1 AND refresh_token_expires > $2
     """
-    user_id = await conn.fetchval(query, refresh_token, datetime.utcnow())
+    user_id = await conn.fetchval(query, refresh_token, datetime.now(timezone.utc))
     
     if not user_id:
         raise HTTPException(
@@ -278,7 +278,7 @@ async def forgot_password(
         UPDATE users
         SET reset_password_token = $2, updated_at = $3
         WHERE id = $1
-        """, user["id"], reset_token, datetime.utcnow())
+        """, user["id"], reset_token, datetime.now(timezone.utc))
         
         # Send password reset email
         await send_password_reset_email(email, user["username"], reset_token)
@@ -320,7 +320,7 @@ async def reset_password_route(
     SET hashed_password = $2, reset_password_token = NULL, updated_at = $3
     WHERE reset_password_token = $1
     RETURNING id
-    """, token, get_password_hash(new_password), datetime.utcnow())
+    """, token, get_password_hash(new_password), datetime.now(timezone.utc))
     
     if not user:
         raise HTTPException(
@@ -375,7 +375,7 @@ async def change_password_route(
     UPDATE users
     SET hashed_password = $2, updated_at = $3
     WHERE id = $1
-    """, current_user["id"], get_password_hash(new_password), datetime.utcnow())
+    """, current_user["id"], get_password_hash(new_password), datetime.now(timezone.utc))
     
     return {
         "message": "Password changed successfully"
@@ -394,7 +394,7 @@ async def logout(
     UPDATE users
     SET is_online = false, last_online = $2, refresh_token = NULL, refresh_token_expires = NULL
     WHERE id = $1
-    """, current_user["id"], datetime.utcnow())
+    """, current_user["id"], datetime.now(timezone.utc))
     
     return {
         "message": "Logged out successfully"

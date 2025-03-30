@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 
@@ -152,7 +152,7 @@ async def create_block(
     await conn.execute("""
     INSERT INTO blocks (blocker_id, blocked_id, created_at)
     VALUES ($1, $2, $3)
-    """, blocker_profile["id"], blocked_id, datetime.utcnow())
+    """, blocker_profile["id"], blocked_id, datetime.now(timezone.utc))
     
     # Get blocked user's ID
     blocked_user = await conn.fetchrow("""
@@ -172,7 +172,7 @@ async def create_block(
         UPDATE connections
         SET is_active = false, updated_at = $3
         WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
-        """, current_user["id"], blocked_user["user_id"], datetime.utcnow())
+        """, current_user["id"], blocked_user["user_id"], datetime.now(timezone.utc))
     
     return {
         "message": "Profile blocked successfully"
@@ -401,7 +401,7 @@ async def create_report(
     INSERT INTO reports (reporter_id, reported_id, reason, description, created_at)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING id
-    """, reporter_profile["id"], reported_id, reason, description, datetime.utcnow())
+    """, reporter_profile["id"], reported_id, reason, description, datetime.now(timezone.utc))
     
     return {
         "message": "Profile reported successfully",
@@ -525,7 +525,7 @@ async def create_visit(
         )
     
     # Record the visit
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     await conn.execute("""
     INSERT INTO visits (visitor_id, visited_id, created_at)
     VALUES ($1, $2, $3)
