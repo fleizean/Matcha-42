@@ -30,10 +30,10 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <div class="checklist-container">
 
 - [ ] No errors, warnings, or notices (server-side & client-side) 🤔
-- [ ] Use any programming language and micro-framework of choice 🤔
+- [x] Use any programming language and micro-framework of choice 🤔
 - [x] Use a relational or graph-oriented database (MySQL, PostgreSQL, Neo4j, etc.)
 - [x] Ensure database contains at least 500 distinct profiles
-- [ ] Use a secure and well-structured UI (React, Vue, Bootstrap, etc.)
+- [x] Use a secure and well-structured UI (React, Vue, Bootstrap, etc.)
 - [x] Ensure website is mobile-friendly
 - [x] Implement proper form validation
 - [x] Prevent security vulnerabilities (SQL injection, XSS, plain-text passwords)
@@ -65,7 +65,7 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <summary><b>🏠 User Profile</b></summary>
 <div class="checklist-container">
 
-- [ ] Require users to complete profile with: 🤔
+- [x] Require users to complete profile with: 🤔
   - [x] Gender
   - [x] Sexual Preferences
   - [x] Biography
@@ -108,12 +108,12 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <summary><b>🔬 Research (Advanced Search)</b></summary>
 <div class="checklist-container">
 
-- [ ] Allow users to search with criteria: 🤔
-  - [ ] Age range 🤔
-  - [ ] "Fame rating" range 🤔
-  - [ ] Location 🤔
-  - [ ] Interest tags 🤔
-- [ ] Allow sorting and filtering in search results 🤔
+- [x] Allow users to search with criteria: 🤔
+  - [x] Age range 🤔
+  - [x] "Fame rating" range 🤔
+  - [x] Location 🤔
+  - [x] Interest tags 🤔
+- [x] Allow sorting and filtering in search results 🤔
 
 </div>
 </details>
