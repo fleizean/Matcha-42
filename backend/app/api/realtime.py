@@ -47,7 +47,7 @@ class ConnectionManager:
     async def send_personal_message(self, message: Any, user_id: str):
         if user_id in self.active_connections:
             await self.active_connections[user_id].send_text(json.dumps(message))
-            logger.debug(f"Sent message to user {user_id}: {message}")
+            logger.info(f"Sent message to user {user_id}: {message}")
     
     async def broadcast(self, message: Any):
         for user_id, connection in self.active_connections.items():
@@ -109,10 +109,14 @@ async def websocket_endpoint(
                     recipient_id = message_data["recipientId"]
                     content = message_data["content"]
                     
+                    logger.info(f"💬 Message: {user['id']} -> {recipient_id}: {content[:30]}...")
+                    
                     # Create message in database
                     message = await send_message(conn, user["id"], recipient_id, content)
                     
                     if message:
+                        logger.info(f"✅ Message saved in database")
+                        
                         # Get sender info
                         sender = await conn.fetchrow("""
                         SELECT username, first_name, last_name
@@ -128,24 +132,34 @@ async def websocket_endpoint(
                         """, recipient_id)
                         
                         if sender and recipient:
+                            logger.info(f"🔍 Found sender and recipient: {sender['username']} -> {recipient['username']}")
+                            
                             # Send message to recipient if online
+                            logger.info(f"📤 Attempting to send message to recipient: {recipient_id}")
+                            
+                            # Format the timestamp properly - this is the key fix
+                            timestamp = None
+                            if "message" in message and message["message"]:
+                                if "created_at" in message["message"]:
+                                    if isinstance(message["message"]["created_at"], (str, datetime)):
+                                        timestamp = (
+                                            message["message"]["created_at"].isoformat() 
+                                            if isinstance(message["message"]["created_at"], datetime) 
+                                            else message["message"]["created_at"]
+                                        )
+                            
+                            # If we couldn't get the timestamp, use the current time
+                            if timestamp is None:
+                                timestamp = datetime.utcnow().isoformat()
+                                
+                            # Send with proper timestamp
                             await manager.send_personal_message({
                                 "type": "message",
                                 "sender_id": user["id"],
                                 "recipient_id": recipient_id,
                                 "content": content,
-                                "timestamp": message["created_at"].isoformat()
-                            }, recipient_id)
-                            
-                            # Also send notification event
-                            await manager.send_personal_message({
-                                "type": "notification",
-                                "data": {
-                                    "type": "message",
-                                    "sender_id": user["id"],
-                                    "content": f"New message from {sender['first_name']}: {content[:30]}..." if len(content) > 30 else f"New message from {sender['first_name']}: {content}"
-                                }
-                            }, recipient_id)
+                                "timestamp": timestamp
+            }, recipient_id)
                 
                 elif message_data["type"] == "ping":
                     # Client ping to keep connection alive and update online status
@@ -221,7 +235,7 @@ async def send_message_with_notification(sender_id: str, recipient_id: str, cont
             recipient_id,
             "message",
             sender_id,
-            f"{sender.first_name} size yeni bir mesaj gönderdi: '{content[:30]}...'" if len(content) > 30 else f"{sender.first_name} size yeni bir mesaj gönderdi: '{content}'"
+            f"{sender} size yeni bir mesaj gönderdi: '{content[:30]}...'" if len(content) > 30 else f"{sender} size yeni bir mesaj gönderdi: '{content}'"
         )
     
     return result
