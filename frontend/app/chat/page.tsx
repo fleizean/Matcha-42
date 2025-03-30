@@ -101,6 +101,7 @@ const ChatPage = () => {
     blocked_by_them: false,
     blocker_id: null
   });
+  const [blockStatusCache, setBlockStatusCache] = useState<Record<string, BlockStatus>>({});
 
   useEffect(() => {
     document.title = metadata.title as string;
@@ -461,7 +462,12 @@ const ChatPage = () => {
   };
 
   const checkBlockStatus = async (username: string) => {
-    if (!session?.user?.accessToken) return;
+    if (!session?.user?.accessToken) return null;
+
+    // Check if we have cached results
+    if (blockStatusCache[username]) {
+      return blockStatusCache[username];
+    }
 
     try {
       const response = await fetch(
@@ -476,6 +482,13 @@ const ChatPage = () => {
 
       if (!response.ok) throw new Error('Failed to check block status');
       const data = await response.json();
+
+      // Store the result in cache
+      setBlockStatusCache(prev => ({
+        ...prev,
+        [username]: data
+      }));
+
       return data;
     } catch (error) {
       console.error('Block status check error:', error);
@@ -676,8 +689,6 @@ const ChatPage = () => {
 
     setActiveChat(userId);
     setActiveChatUser(user);
-
-    // Rest of the existing code...
   };
 
   useEffect(() => {
