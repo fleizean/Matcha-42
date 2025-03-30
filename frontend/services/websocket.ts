@@ -16,6 +16,7 @@ class WebSocketService {
   private initializing: boolean = false;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+  private activeConversationId: string | null = null; // Track active conversation
 
   // Create a singleton instance
   private static instance: WebSocketService | null = null;
@@ -28,6 +29,17 @@ class WebSocketService {
   }
 
   private constructor() {}
+
+  // Set the active conversation ID
+  public setActiveConversation(userId: string | null): void {
+    this.activeConversationId = userId;
+    console.log(`Active conversation set to: ${userId}`);
+  }
+
+  // Get the active conversation ID
+  public getActiveConversation(): string | null {
+    return this.activeConversationId;
+  }
 
   public connect(apiUrl: string, token: string): void {
     // Don't try to connect if already in the process of initializing
@@ -200,8 +212,6 @@ class WebSocketService {
     });
   }
 
-
-
   private handleMessage(event: MessageEvent): void {
     try {
       const data = JSON.parse(event.data);
@@ -210,6 +220,15 @@ class WebSocketService {
       if (data.type === 'pong') {
         console.log('Ping-pong completed');
         return;
+      }
+      
+      // Filter out message notifications if currently viewing that conversation
+      if (data.type === 'notification' && data.data?.type === 'message') {
+        // If sender_id matches activeConversationId, don't forward the notification
+        if (data.data.sender_id === this.activeConversationId) {
+          console.log(`Suppressing notification for active conversation: ${this.activeConversationId}`);
+          return;
+        }
       }
       
       // Notify all message handlers

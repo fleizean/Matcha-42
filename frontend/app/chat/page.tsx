@@ -171,6 +171,19 @@ const ChatPage = () => {
     fetchCurrentUser();
   }, [session]);
 
+  // Keep track of active chat in WebSocket service
+  useEffect(() => {
+    if (wsService.current) {
+      // When active chat changes, update the WebSocket service
+      wsService.current.setActiveConversation(activeChat);
+      
+      // When component unmounts, clear the active conversation
+      return () => {
+        wsService.current.setActiveConversation(null);
+      };
+    }
+  }, [activeChat]);
+
   const setupWebSocket = () => {
     if (!session?.user?.accessToken || !process.env.NEXT_PUBLIC_BACKEND_API_URL) {
       toast.error('WebSocket bağlantısı kurulamadı');
@@ -321,7 +334,7 @@ const ChatPage = () => {
       const data: Conversation[] = await response.json();
       setConversations(data);
 
-      const conversationsWithProfiles = [...data];
+      //const conversationsWithProfiles = [...data];
 
       const profilePromises = data.map(async (conv) => {
         try {
@@ -339,8 +352,6 @@ const ChatPage = () => {
       // URL'den alınan kullanıcı ID'si
       const params = new URLSearchParams(window.location.search);
       const userIdFromUrl = params.get('user');
-      console.log('userIdFromUrl:', userIdFromUrl);
-      console.log('conversations:', conversations);
       if (userIdFromUrl && session?.user?.accessToken && conversations.length > 0) {
         const urlConversation = data.find(c => c.user.id === userIdFromUrl);
 
@@ -388,10 +399,14 @@ const ChatPage = () => {
     }
   };
 
+
   const fetchMessages = async (userId: string) => {
     if (!session?.user?.accessToken) return;
 
     setIsLoadingMessages(true);
+    
+    // Update WebSocket service with active user ID
+    wsService.current.setActiveConversation(userId);
 
     try {
       // First get the username for block check
@@ -440,7 +455,6 @@ const ChatPage = () => {
       }
 
       const data: Message[] = await response.json();
-      console.log("data: ", data);
       setMessages(data);
 
       // Update conversations unread count

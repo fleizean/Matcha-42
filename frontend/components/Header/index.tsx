@@ -535,6 +535,7 @@ const getNotificationIcon = (type: string) => {
     setShowMobileNotifications(!showMobileNotifications);
   };
   
+
   // Mobil görünümde bildirim butonuna tıklandığında çağrılacak fonksiyon
   const handleMobileNotificationClick = () => {
     toggleMobileNotifications();
@@ -589,11 +590,20 @@ const getNotificationIcon = (type: string) => {
                     }}
                   >
                     <div className="flex items-start">
-                      <div className={`w-2 h-2 rounded-full mt-2 mr-2 flex-shrink-0 ${!notification.read ? 'bg-[#D63384]' : 'bg-transparent'}`}></div>
-                      <div className="flex-1">
-                        <p className="text-sm text-white">{formatNotificationMessage(notification)}</p>
-                        <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                      <div className="mr-3 mt-1">
+                        {getNotificationIcon(notification.type)}
                       </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white">
+                          {notification.content || formatNotificationMessage(notification)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatTimestamp(notification.time)}
+                        </p>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 rounded-full bg-[#D63384] flex-shrink-0 mt-2"></div>
+                      )}
                     </div>
                   </li>
                 ))}
