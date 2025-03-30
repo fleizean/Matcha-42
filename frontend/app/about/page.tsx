@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FiUsers, FiFileText, FiTrendingUp } from "react-icons/fi";
+import { FaGithub, FaGraduationCap, FaInstagram, FaSquareXTwitter } from "react-icons/fa6";
 import { Metadata } from 'next'
 
 
@@ -18,11 +18,8 @@ const metadata: Metadata = {
 }
 
 const AboutPage = () => {
-  const [stats, setStats] = useState([
-    { id: 1, name: 'Aktif Kullanıcı', value: '1', icon: FiUsers },
-    { id: 2, name: 'Başarılı Eşleşme', value: '1', icon: FiFileText },
-    { id: 3, name: 'Kullanıcı Memnuniyeti', value: '5/5', icon: FiTrendingUp },
-  ]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
 
   useEffect(() => {
     document.title = metadata.title as string;
@@ -36,46 +33,9 @@ const AboutPage = () => {
       document.head.appendChild(meta);
     }
   }, []);
-  
-      const [isLoading, setIsLoading] = useState(true);
 
-      useEffect(() => {
-        const fetchStats = async () => {
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/About/GetAboutStats`);
-            if (!response.ok) throw new Error('Stats fetch failed');
-            
-            const data = await response.json();
-            
-            setStats([
-              { 
-                id: 1, 
-                name: 'Aktif Kullanıcı', 
-                value: data.activeUsers.toLocaleString(), 
-                icon: FiUsers 
-              },
-              { 
-                id: 2, 
-                name: 'Başarılı Eşleşme', 
-                value: data.totalAnalyses.toLocaleString(), 
-                icon: FiFileText 
-              },
-              { 
-                id: 3, 
-                name: 'Kullanıcı Memnuniyeti', 
-                value: `${data.userRatingRate.toFixed(1)}/5`, 
-                icon: FiTrendingUp 
-              }
-            ]);
-          } catch (error) {
-            console.error('Stats fetch error:', error);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-    
-        fetchStats();
-      }, []);
+
+
 
   return (
     <section className="pt-[150px] pb-[120px] bg-[#1C1C1E]">
@@ -130,33 +90,6 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Stats */}
-        <section className="py-16">
-          <div className="container px-3 mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {stats.map((stat) => (
-                <motion.div
-                  key={stat.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: stat.id * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="flex justify-center mb-4">
-                    <stat.icon className="w-8 h-8 text-[#D63384]" />
-                  </div>
-                  <div className="text-3xl font-bold text-white mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    {stat.name}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Features */}
         <section className="py-16 bg-[#2C2C2E]">
           <div className="container px-4 mx-auto">
@@ -207,9 +140,127 @@ const AboutPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Our Team */}
+        <section className="py-16 bg-[#2C2C2E]">
+          <div className="container px-4 mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center max-w-3xl mx-auto mb-12"
+            >
+              <h2 className="text-3xl font-bold text-white mb-4">
+                Ekibimiz
+              </h2>
+              <p className="text-gray-300">
+                CrushIt'i sizin için daha iyi hale getirmek için çalışan harika bir ekip.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {/* Team Member 1 */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="bg-[#3A3A3C] rounded-xl overflow-hidden shadow-lg"
+              >
+                <div className="h-64 overflow-hidden" onClick={() => setSelectedImage("/images/team/member1.jpeg")}>
+                  <img
+                    src="/images/team/member1.jpeg"
+                    alt="Team Member"
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-white mb-1">Enes yağız</h3>
+                  <p className="text-purple-400 mb-4">Geliştirici</p>
+                  <div className="flex space-x-4">
+                    <a href="https://x.com/onlyflei" className="text-gray-400 hover:text-white transition-colors">
+                      <FaSquareXTwitter />
+                    </a>
+                    <a href="https://www.instagram.com/fleizean/" className="text-gray-400 hover:text-white transition-colors">
+                      <FaInstagram />
+                    </a>
+                    <a href="https://github.com/fleizean" className="text-gray-400 hover:text-white transition-colors">
+                      <FaGithub />
+                    </a>
+                    <a href="https://profile.intra.42.fr/users/eyagiz" className="text-gray-400 hover:text-white transition-colors">
+                      <FaGraduationCap />
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Team Member 2 */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-[#3A3A3C] rounded-xl overflow-hidden shadow-lg"
+              >
+                <div className="h-64 overflow-hidden" onClick={() => setSelectedImage("/images/team/member2.jpeg")}>
+                  <img
+                    src="/images/team/member2.jpeg"
+                    alt="Team Member"
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-white mb-1">Samet Çiftçi</h3>
+                  <p className="text-purple-400 mb-4">Geliştirici</p>
+                  <div className="flex space-x-4">
+
+                    <a href="https://www.instagram.com/temasictfic/" className="text-gray-400 hover:text-white transition-colors">
+                      <FaInstagram />
+                    </a>
+                    <a href="https://github.com/temasictfic/" className="text-gray-400 hover:text-white transition-colors">
+                      <FaGithub />
+                    </a>
+                    <a href="https://profile.intra.42.fr/users/sciftci" className="text-gray-400 hover:text-white transition-colors">
+                      <FaGraduationCap />
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+
+            </div>
+
+          </div>
+        </section>
+               {selectedImage && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[10000]"
+                    onClick={() => setSelectedImage(null)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0.8 }}
+                      className="relative max-w-4xl max-h-[90vh]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <img
+                        src={selectedImage}
+                        alt="Full size"
+                        className="max-w-full max-h-[90vh] object-contain"
+                      />
+                      <button
+                        className="absolute top-2 right-2 bg-white bg-opacity-25 hover:bg-opacity-50 rounded-full p-2 text-white"
+                        onClick={() => setSelectedImage(null)}
+                      >
+                        ✕
+                      </button>
+                    </motion.div>
+                  </motion.div>
+                )}
       </div>
     </section>
   );
-}; 
+};
 
 export default AboutPage;
