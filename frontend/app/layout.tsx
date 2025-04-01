@@ -12,19 +12,7 @@ import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Footer bileşenini sadece giriş yapmamış kullanıcılara gösteren fonksiyon bileşen
-function ConditionalFooter() {
-  const { data: session } = useSession();
-  
-  // Kullanıcı giriş yapmamışsa Footer'ı göster
-  if (!session) {
-    return <Footer />;
-  }
-  
-  // Kullanıcı giriş yapmışsa Footer'ı gösterme
-  return null;
-}
-
+// Footer will always be shown regardless of user login status
 export default function RootLayout({
   children,
 }: {
@@ -39,7 +27,7 @@ export default function RootLayout({
             <AuthCheck />
             <Header />
             {children}
-            <ConditionalFooter />
+            <Footer />
             <ScrollToTop />
           </Providers>
         </SessionProvider>
