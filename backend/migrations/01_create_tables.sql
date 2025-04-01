@@ -18,8 +18,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_online TIMESTAMP WITH TIME ZONE,
     is_online BOOLEAN DEFAULT FALSE,
-    latitude FLOAT,
-    longitude FLOAT
 );
 
 -- Profiles table
