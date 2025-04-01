@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { toast, Toaster } from "react-hot-toast";
 import { Metadata } from 'next'
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import OAuthButtons from "@/components/Auth/OAuthButtons";
 
 const metadata: Metadata = {
   title: 'Giriş Yap | CrushIt',
@@ -92,7 +93,11 @@ const SigninPage = () => {
                   Hemen giriş yapın ve yeni insanlarla tanışın.
                 </p>
 
-               
+                <OAuthButtons onStart={() => {
+                  toast.loading('42 hesabınızla giriş yapılıyor...', {
+                    duration: 10000,
+                  });
+                }} />               
 
                 <div className="mb-8 flex items-center justify-center">
                   <span className="hidden h-[1px] w-full max-w-[70px] bg-gray-600 sm:block"></span>

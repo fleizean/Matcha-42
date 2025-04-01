@@ -17,6 +17,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
 import { signIn } from "next-auth/react";
+import OAuthButtons from "@/components/Auth/OAuthButtons";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const SignupPage = () => {
@@ -136,7 +137,11 @@ const SignupPage = () => {
                 <p className="mb-11 text-center text-base font-medium text-gray-300">
                   Hemen üye olun ve yeni insanlarla tanışın.
                 </p>
-
+                <OAuthButtons onStart={() => {
+                  toast.loading('42 hesabınızla kayıt olunuyor...', {
+                    duration: 10000,
+                  });
+                }} />
 
 
                 <div className="mb-8 flex items-center justify-center">

@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-import requests
+import httpx
 import time
 from faker import Faker
 import asyncpg
@@ -110,7 +110,7 @@ def use_existing_profile_picture(profile_id, profile_pictures_dict):
     
     return copied_files
 
-def download_ai_profile_picture(profile_id, index):
+async def download_ai_profile_picture(profile_id, index):
     """Download an AI-generated profile picture"""
     # Create directory if it doesn't exist
     profile_dir = os.path.join(MEDIA_ROOT, "profile_pictures", profile_id)
@@ -123,7 +123,8 @@ def download_ai_profile_picture(profile_id, index):
     try:
         # Get a random AI-generated face from thispersondoesnotexist.com
         # This site serves a new random face on each request
-        response = requests.get('https://thispersondoesnotexist.com/', stream=True)
+        async with httpx.AsyncClient() as client:
+            response = await client.get('https://thispersondoesnotexist.com/')
         
         if response.status_code == 200:
             # Save the image
@@ -323,7 +324,7 @@ async def create_fake_users_with_ai_pictures(count=50):
                 # Add AI-generated profile pictures
                 for i in range(random.randint(1, 3)):
                     # Download AI-generated photo
-                    success = download_ai_profile_picture(profile_id, i)
+                    success = await download_ai_profile_picture(profile_id, i)
                     
                     # Only add to database if download was successful
                     if success:

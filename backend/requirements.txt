@@ -26,10 +26,10 @@ python-dotenv==1.1.0
 pydantic==2.11.1
 pydantic-settings==2.8.1
 email-validator==2.2.0
+httpx==0.28.1
 
 # Not necessary?
 #greenlet==3.1.1
 
 # Create fake users
 Faker==37.1.0
-requests==2.32.3

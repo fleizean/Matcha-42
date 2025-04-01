@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     MAIL_SERVER: str
     MAIL_TLS: bool = True
     MAIL_SSL: bool = False
+
+    # OAuth settings
+    OAUTH_42_CLIENT_ID: str
+    OAUTH_42_CLIENT_SECRET: str
     
 
     FRONTEND_URL: str

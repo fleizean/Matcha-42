@@ -105,8 +105,20 @@ const handler = NextAuth({
         refreshToken: { label: "Refresh Token", type: "text" }
       },
       async authorize(credentials) {
-        try {          
-          // Regular Login
+        try {
+          // Check if this is an OAuth login
+          if (credentials?.loginType === 'oauth') {
+            // For OAuth logins, we've already validated at the backend
+            // Just return a user object with the tokens
+            return {
+              id: 'oauth-user',  // Will be replaced by actual user data in session callback
+              accessToken: credentials.accessToken,
+              refreshToken: credentials.refreshToken,
+              expiration: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes from now
+            };
+          }
+          
+          // Regular username/password login
           const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/login/json`, {
             method: 'POST',
             headers: {
@@ -118,18 +130,17 @@ const handler = NextAuth({
               password: credentials?.password,
             })
           });
-
+      
           const data = await res.json();
-          console.log("Login response:", data);
-
+      
           if (!res.ok) {
             return Promise.reject(new Error(data.detail));
           }
-
+      
           if (data?.access_token) {
             const tokenData = JSON.parse(atob(data.access_token.split('.')[1]));
             const expirationTime = tokenData.exp * 1000;
-
+      
             return {
               id: credentials?.usernameOrEmail || '1',
               accessToken: data.access_token,

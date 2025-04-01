@@ -20,6 +20,21 @@ CREATE TABLE IF NOT EXISTS users (
     is_online BOOLEAN DEFAULT FALSE,
 );
 
+-- OAuth connections table
+CREATE TABLE IF NOT EXISTS oauth_connections (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR(20) NOT NULL,
+    provider_user_id VARCHAR(100) NOT NULL,
+    provider_data JSONB,
+    access_token TEXT,
+    refresh_token TEXT,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (provider, provider_user_id)
+);
+
 -- Profiles table
 CREATE TABLE IF NOT EXISTS profiles (
     id VARCHAR(36) PRIMARY KEY,
@@ -134,6 +149,9 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- Add indexes for improved performance
 CREATE INDEX idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX idx_oauth_connections_user_id ON oauth_connections(user_id);
+CREATE INDEX idx_oauth_connections_provider ON oauth_connections(provider);
+CREATE INDEX idx_oauth_connections_provider_user_id ON oauth_connections(provider, provider_user_id);
 CREATE INDEX idx_profile_pictures_profile_id ON profile_pictures(profile_id);
 CREATE INDEX idx_profile_tags_profile_id ON profile_tags(profile_id);
 CREATE INDEX idx_profile_tags_tag_id ON profile_tags(tag_id);
