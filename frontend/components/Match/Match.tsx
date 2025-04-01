@@ -765,7 +765,7 @@ const Match = () => {
         <div className="flex flex-wrap">
           {/* Filter Sidebar - Fixed position on scroll */}
           <div className="w-full lg:w-1/4 mb-8 lg:mb-0">
-            <div className="lg:sticky lg:top-28 bg-[#2C2C2E] rounded-xl p-6 max-h-[calc(100vh-120px)] overflow-y-auto">
+            <div className="lg:sticky lg:top-24 bg-[#2C2C2E] rounded-xl p-6 max-h-[calc(100vh-120px)] overflow-y-auto">
               <h3 className="text-xl font-semibold text-white mb-6">Filtreler</h3>
 
               <div className="mb-6">
