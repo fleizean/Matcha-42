@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.db import get_connection
 from app.core.security import create_access_token, create_refresh_token, get_current_user, verify_password, get_password_hash
-from app.validation.user import validate_user_create
+from app.validation.user import validate_password, validate_user_create
 from app.db import users, profiles
 from app.services.email import send_verification_email, send_password_reset_email
 
@@ -308,10 +308,11 @@ async def reset_password_route(
         )
     
     # Validate password
-    if len(new_password) < 8:
+    is_valid, msg = validate_password(new_password)
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
+            detail=msg
         )
     
     # Reset password
@@ -352,10 +353,11 @@ async def change_password_route(
         )
     
     # Validate new password
-    if len(new_password) < 8:
+    is_valid, msg = validate_password(new_password)
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 8 characters long"
+            detail=msg
         )
     
     # Get user with password

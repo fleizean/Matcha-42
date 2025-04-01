@@ -25,17 +25,6 @@ async def get_profile_by_user_id(conn, user_id):
     """
     return await conn.fetchrow(query, user_id)
 
-async def get_profile_by_username(conn, username):
-    """Get a profile by username"""
-    query = """
-    SELECT p.id, p.user_id, p.gender, p.sexual_preference, p.biography,
-           p.latitude, p.longitude, p.fame_rating, p.is_complete,
-           p.birth_date, p.created_at, p.updated_at
-    FROM profiles p
-    JOIN users u ON p.user_id = u.id
-    WHERE u.username = $1
-    """
-    return await conn.fetchrow(query, username)
 
 async def create_profile(conn, user_id):
     """Create a new profile for a user"""
@@ -47,71 +36,6 @@ async def create_profile(conn, user_id):
     """
     return await conn.fetchval(query, profile_id, user_id, False, 0.0)
 
-async def update_profile(conn, profile_id, profile_data):
-    """Update profile information"""
-    # Build dynamic update query based on provided fields
-    fields = []
-    values = [profile_id]  # First parameter is always the profile_id
-    param_idx = 2
-
-    for key, value in profile_data.items():
-        if key in ['gender', 'sexual_preference', 'biography', 'latitude', 'longitude', 'birth_date', 'is_complete']:
-            fields.append(f"{key} = ${param_idx}")
-            values.append(value)
-            param_idx += 1
-
-    # Add updated_at field
-    fields.append(f"updated_at = ${param_idx}")
-    values.append(datetime.now(timezone.utc))
-
-    # If no fields to update, return early
-    if not fields:
-        return None
-
-    query = f"""
-    UPDATE profiles
-    SET {', '.join(fields)}
-    WHERE id = $1
-    RETURNING id, user_id, gender, sexual_preference, biography,
-              latitude, longitude, fame_rating, is_complete, birth_date
-    """
-    
-    return await conn.fetchrow(query, *values)
-
-async def is_profile_complete(conn, profile_id):
-    """Check if a profile is complete with all required information"""
-    # Get profile details
-    profile = await get_profile_by_id(conn, profile_id)
-    if not profile:
-        return False
-    
-    # Check required fields
-    if (profile['gender'] is None or
-        profile['sexual_preference'] is None or
-        profile['biography'] is None or
-        profile['latitude'] is None or
-        profile['longitude'] is None):
-        return False
-    
-    # Check if profile has at least one picture
-    pic_count = await conn.fetchval("""
-    SELECT COUNT(*) FROM profile_pictures
-    WHERE profile_id = $1
-    """, profile_id)
-    
-    if pic_count == 0:
-        return False
-    
-    # Check if profile has at least one tag
-    tag_count = await conn.fetchval("""
-    SELECT COUNT(*) FROM profile_tags
-    WHERE profile_id = $1
-    """, profile_id)
-    
-    if tag_count == 0:
-        return False
-    
-    return True
 
 async def get_profile_pictures(conn, profile_id):
     """Get all pictures for a profile"""
@@ -123,49 +47,6 @@ async def get_profile_pictures(conn, profile_id):
     """
     return await conn.fetch(query, profile_id)
 
-async def add_profile_picture(conn, profile_id, file_path, backend_url, is_primary=False):
-    """Add a picture to a profile"""
-    # If this is primary, unset any existing primary pictures
-    if is_primary:
-        await conn.execute("""
-        UPDATE profile_pictures
-        SET is_primary = false
-        WHERE profile_id = $1
-        """, profile_id)
-    
-    query = """
-    INSERT INTO profile_pictures (profile_id, file_path, backend_url, is_primary)
-    VALUES ($1, $2, $3, $4)
-    RETURNING id, profile_id, file_path, backend_url, is_primary, created_at
-    """
-    return await conn.fetchrow(query, profile_id, file_path, backend_url, is_primary)
-
-async def set_primary_picture(conn, profile_id, picture_id):
-    """Set a picture as primary for a profile"""
-    # First unset all primary pictures
-    await conn.execute("""
-    UPDATE profile_pictures
-    SET is_primary = false
-    WHERE profile_id = $1
-    """, profile_id)
-    
-    # Then set the selected picture as primary
-    query = """
-    UPDATE profile_pictures
-    SET is_primary = true
-    WHERE id = $1 AND profile_id = $2
-    RETURNING id
-    """
-    return await conn.fetchval(query, picture_id, profile_id)
-
-async def remove_profile_picture(conn, picture_id, profile_id):
-    """Remove a picture from a profile"""
-    query = """
-    DELETE FROM profile_pictures
-    WHERE id = $1 AND profile_id = $2
-    RETURNING id, is_primary
-    """
-    return await conn.fetchrow(query, picture_id, profile_id)
 
 async def get_profile_tags(conn, profile_id):
     """Get all tags for a profile"""
@@ -177,38 +58,6 @@ async def get_profile_tags(conn, profile_id):
     """
     return await conn.fetch(query, profile_id)
 
-async def update_profile_tags(conn, profile_id, tag_names):
-    """Update a profile's tags"""
-    # Start a transaction
-    async with conn.transaction():
-        # Remove all existing tags for the profile
-        await conn.execute("""
-        DELETE FROM profile_tags
-        WHERE profile_id = $1
-        """, profile_id)
-        
-        # Add each tag
-        for tag_name in tag_names:
-            # Check if tag exists
-            tag_id = await conn.fetchval("""
-            SELECT id FROM tags WHERE name = $1
-            """, tag_name.lower())
-            
-            # Create tag if it doesn't exist
-            if not tag_id:
-                tag_id = await conn.fetchval("""
-                INSERT INTO tags (name) VALUES ($1) RETURNING id
-                """, tag_name.lower())
-            
-            # Add tag to profile
-            await conn.execute("""
-            INSERT INTO profile_tags (profile_id, tag_id)
-            VALUES ($1, $2)
-            ON CONFLICT DO NOTHING
-            """, profile_id, tag_id)
-            
-    # Return the updated tags
-    return await get_profile_tags(conn, profile_id)
 
 async def update_fame_rating(conn, profile_id):
     """Update a profile's fame rating based on likes and visits"""

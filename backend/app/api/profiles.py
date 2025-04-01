@@ -10,7 +10,7 @@ from app.core.db import get_connection
 from app.core.security import get_current_verified_user
 from app.core.config import settings
 from app.validation.profile import validate_profile_update, validate_tags
-from app.db.profiles import get_suggested_profiles, update_fame_rating
+from app.db.profiles import get_profile_pictures, get_profile_tags, get_suggested_profiles, update_fame_rating
 from app.db.realtime import create_notification
 from app.api.realtime import broadcast_notification, manager
 
@@ -35,20 +35,10 @@ async def get_my_profile(
         )
     
     # Get profile pictures
-    pictures = await conn.fetch("""
-    SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-    FROM profile_pictures
-    WHERE profile_id = $1
-    ORDER BY is_primary DESC, created_at ASC
-    """, profile["id"])
+    pictures = await get_profile_pictures(conn, profile["id"])
     
     # Get profile tags
-    tags = await conn.fetch("""
-    SELECT t.id, t.name
-    FROM tags t
-    JOIN profile_tags pt ON t.id = pt.tag_id
-    WHERE pt.profile_id = $1
-    """, profile["id"])
+    tags = await get_profile_tags(conn, profile["id"])
     
     # Combine data
     result = dict(profile)
@@ -186,20 +176,10 @@ async def update_my_profile(
         )
     
     # Get profile pictures
-    pictures = await conn.fetch("""
-    SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-    FROM profile_pictures
-    WHERE profile_id = $1
-    ORDER BY is_primary DESC, created_at ASC
-    """, profile["id"])
+    pictures = await get_profile_pictures(conn, profile["id"])
     
     # Get profile tags
-    tags = await conn.fetch("""
-    SELECT t.id, t.name
-    FROM tags t
-    JOIN profile_tags pt ON t.id = pt.tag_id
-    WHERE pt.profile_id = $1
-    """, profile["id"])
+    tags = await get_profile_tags(conn, profile["id"])
     
     # Combine data
     result = dict(updated_profile)
@@ -302,20 +282,10 @@ async def update_my_tags(
     """, profile["id"])
     
     # Get profile pictures
-    pictures = await conn.fetch("""
-    SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-    FROM profile_pictures
-    WHERE profile_id = $1
-    ORDER BY is_primary DESC, created_at ASC
-    """, profile["id"])
+    pictures = await get_profile_pictures(conn, profile["id"])
     
-    # Get new tags
-    new_tags = await conn.fetch("""
-    SELECT t.id, t.name
-    FROM tags t
-    JOIN profile_tags pt ON t.id = pt.tag_id
-    WHERE pt.profile_id = $1
-    """, profile["id"])
+    # Get profile new tags
+    new_tags = await get_profile_tags(conn, profile["id"])
     
     # Combine data
     result = dict(updated_profile)
@@ -409,20 +379,10 @@ async def update_location(
     """, profile["id"])
     
     # Get profile pictures
-    pictures = await conn.fetch("""
-    SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-    FROM profile_pictures
-    WHERE profile_id = $1
-    ORDER BY is_primary DESC, created_at ASC
-    """, profile["id"])
+    pictures = await get_profile_pictures(conn, profile["id"])
     
     # Get profile tags
-    tags = await conn.fetch("""
-    SELECT t.id, t.name
-    FROM tags t
-    JOIN profile_tags pt ON t.id = pt.tag_id
-    WHERE pt.profile_id = $1
-    """, profile["id"])
+    tags = await get_profile_tags(conn, profile["id"])
     
     # Combine data
     result = dict(updated_profile)
@@ -789,10 +749,10 @@ async def get_profile(
                 detail="Profile not found"
             )
         
-        # Check if profile user has blocked current user
+        # Check if profile user has blocked current user OR current user has blocked profile user
         is_blocked = await conn.fetchval("""
         SELECT id FROM blocks
-        WHERE blocker_id = $2 AND blocked_id = $1
+        WHERE (blocker_id = $2 AND blocked_id = $1) OR (blocker_id = $1 AND blocked_id = $2)
         """, current_user["id"], profile_user["id"])
         
         if is_blocked:
@@ -802,20 +762,10 @@ async def get_profile(
             )
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, profile_user["id"])
+        pictures = await get_profile_pictures(conn, profile_user["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, profile_user["id"])
+        tags = await get_profile_tags(conn, profile_user["id"])
         
         # Record visit if not own profile
         if profile_user["user_id"] != current_user["id"]:
@@ -891,20 +841,10 @@ async def get_profile_for_chat(
             )
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, profile_user["id"])
+        pictures = await get_profile_pictures(conn, profile_user["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, profile_user["id"])
+        tags = await get_profile_tags(conn, profile_user["id"])
         
         # Combine all data into a single response
         profile_dict = dict(profile_user)
@@ -948,20 +888,10 @@ async def get_profile_by_user_id_endpoint(
             )
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary, created_at
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, profile_user["id"])
+        pictures = await get_profile_pictures(conn, profile_user["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, profile_user["id"])
+        tags = await get_profile_tags(conn, profile_user["id"])
         
         # Combine all data into a single response
         profile_dict = dict(profile_user)
@@ -1038,7 +968,7 @@ async def delete_account(
                 detail="User not found"
             )
         
-        # Verify password - you'll need to import your password verification function
+        # Verify password
         from app.core.security import verify_password
         if not verify_password(password, user["hashed_password"]):
             raise HTTPException(

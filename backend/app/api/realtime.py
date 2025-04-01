@@ -14,12 +14,12 @@ from app.db.realtime import (
     get_unread_notification_count,
     send_message,
     get_messages,
-    get_unread_message_count
+    get_unread_message_count,
+    verify_jwt_token
 )
 
 
 from app.db.users import update_last_activity
-from app.db.auth import verify_jwt_token
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

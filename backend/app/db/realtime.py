@@ -1,5 +1,16 @@
 from datetime import datetime, timezone
-import re
+from jose import jwt, JWTError
+from app.core.config import settings
+
+def verify_jwt_token(token):
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        return payload
+    except JWTError:
+        return None
 
 async def create_notification(conn, user_id, sender_id, notification_type, content=None):
     """Create a notification"""

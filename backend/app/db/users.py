@@ -4,16 +4,6 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-async def get_user_by_id(conn, user_id):
-    """Get a user by ID"""
-    query = """
-    SELECT id, username, email, first_name, last_name, 
-           is_active, is_verified, is_online, last_online,
-           created_at, updated_at
-    FROM users
-    WHERE id = $1
-    """
-    return await conn.fetchrow(query, user_id)
 
 async def get_user_by_username(conn, username):
     """Get a user by username"""
@@ -89,15 +79,6 @@ async def update_user(conn, user_id, user_data):
     
     return await conn.fetchrow(query, *values)
 
-async def update_password(conn, user_id, hashed_password):
-    """Update user password"""
-    query = """
-    UPDATE users
-    SET hashed_password = $2, updated_at = $3
-    WHERE id = $1
-    RETURNING id
-    """
-    return await conn.fetchval(query, user_id, hashed_password, datetime.now(timezone.utc))
 
 async def update_last_activity(conn, user_id, is_online):
     """Update user's last activity and online status"""

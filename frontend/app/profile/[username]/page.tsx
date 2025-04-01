@@ -213,7 +213,6 @@ const ProfilePage = () => {
   };
 
   const isBlockedCheck = () => {
-    console.log(blockStatus);
     
     if (!blockStatus) return false;
     

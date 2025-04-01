@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from app.core.db import get_connection
 from app.core.security import get_current_verified_user
-from app.api.realtime import manager, broadcast_notification
-from app.db.profiles import get_profile_by_user_id, update_fame_rating
+from app.db.profiles import get_profile_by_user_id, get_profile_pictures, get_profile_tags
 from app.db.interactions import like_profile, unlike_profile
 
 router = APIRouter()
@@ -102,22 +101,7 @@ async def create_block(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Your profile not found"
         )
-    
-    # If blocked_user_id provided, get their profile_id
-    if not blocked_id and blocked_user_id:
-        blocked_profile = await conn.fetchrow("""
-        SELECT id FROM profiles 
-        WHERE user_id = $1
-        """, blocked_user_id)
-        
-        if not blocked_profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Profile to block not found"
-            )
-        
-        blocked_id = blocked_profile["id"]
-    
+      
     # Check if blocked profile exists
     blocked_profile_exists = await conn.fetchval("""
     SELECT id FROM profiles 
@@ -148,31 +132,15 @@ async def create_block(
             "message": "Profile already blocked"
         }
     
+    # Unlike the blocked profile if it was liked
+    await unlike_profile(conn, blocker_profile["id"], blocked_id, both_ways=True)
+    
     # Create block
     await conn.execute("""
     INSERT INTO blocks (blocker_id, blocked_id, created_at)
     VALUES ($1, $2, $3)
     """, blocker_profile["id"], blocked_id, datetime.now(timezone.utc))
     
-    # Get blocked user's ID
-    blocked_user = await conn.fetchrow("""
-    SELECT user_id FROM profiles
-    WHERE id = $1
-    """, blocked_id)
-    
-    # Remove likes in both directions if any
-    await conn.execute("""
-    DELETE FROM likes
-    WHERE (liker_id = $1 AND liked_id = $2) OR (liker_id = $2 AND liked_id = $1)
-    """, blocker_profile["id"], blocked_id)
-    
-    # Deactivate any connections
-    if blocked_user:
-        await conn.execute("""
-        UPDATE connections
-        SET is_active = false, updated_at = $3
-        WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
-        """, current_user["id"], blocked_user["user_id"], datetime.now(timezone.utc))
     
     return {
         "message": "Profile blocked successfully"
@@ -254,20 +222,10 @@ async def get_blocks(
         profile_data = dict(blocked)
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, blocked["id"])
+        pictures = await get_profile_pictures(conn, blocked["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, blocked["id"])
+        tags = await get_profile_tags(conn, blocked["id"])
         
         # Add pictures and tags to the profile data
         profile_data["pictures"] = [dict(pic) for pic in pictures]
@@ -448,20 +406,10 @@ async def get_likes(
         profile_data = dict(like)
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, like["id"])
+        pictures = await get_profile_pictures(conn, like["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, like["id"])
+        tags = await get_profile_tags(conn, like["id"])
         
         # Add pictures and tags to the profile data
         profile_data["pictures"] = [dict(pic) for pic in pictures]
@@ -471,88 +419,6 @@ async def get_likes(
     
     return result
 
-
-@router.post("/visit/{profile_id}")
-async def create_visit(
-    profile_id: str,
-    current_user = Depends(get_current_verified_user),
-    conn = Depends(get_connection)
-):
-    """Visit a profile"""
-    # Get visitor's profile
-    visitor_profile = await conn.fetchrow("""
-    SELECT id FROM profiles 
-    WHERE user_id = $1
-    """, current_user["id"])
-    
-    if not visitor_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Your profile not found"
-        )
-    
-    # Check if visited profile exists
-    visited_profile = await conn.fetchrow("""
-    SELECT p.id, p.user_id, u.first_name
-    FROM profiles p
-    JOIN users u ON p.user_id = u.id
-    WHERE p.id = $1
-    """, profile_id)
-    
-    if not visited_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile to visit not found"
-        )
-    
-    # Can't visit yourself
-    if profile_id == visitor_profile["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot visit your own profile"
-        )
-    
-    # Check if blocked
-    is_blocked = await conn.fetchrow("""
-    SELECT id FROM blocks
-    WHERE (blocker_id = $1 AND blocked_id = $2) OR (blocker_id = $2 AND blocked_id = $1)
-    """, visitor_profile["id"], profile_id)
-    
-    if is_blocked:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot visit this profile due to block"
-        )
-    
-    # Record the visit
-    now = datetime.now(timezone.utc)
-    await conn.execute("""
-    INSERT INTO visits (visitor_id, visited_id, created_at)
-    VALUES ($1, $2, $3)
-    """, visitor_profile["id"], profile_id, now)
-    
-    # Create notification
-    await conn.execute("""
-    INSERT INTO notifications (user_id, sender_id, type, content, created_at)
-    VALUES ($1, $2, 'visit', $3, $4)
-    """, visited_profile["user_id"], current_user["id"],
-    f"{current_user['first_name']} profilinizi ziyaret etti!", now)
-    
-    # Send WebSocket notification
-    await broadcast_notification(
-        manager,
-        visited_profile["user_id"],
-        "visit",
-        current_user["id"],
-        f"{current_user['first_name']} profilinizi ziyaret etti!"
-    )
-    
-    # Update fame rating
-    await update_fame_rating(conn, profile_id)
-    
-    return {
-        "message": "Profile visited successfully"
-    }
 
 @router.get("/visits")
 async def get_visits(
@@ -616,20 +482,10 @@ async def get_visits(
         profile_data = dict(visit)
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, visit["id"])
+        pictures = await get_profile_pictures(conn, visit["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, visit["id"])
+        tags = await get_profile_tags(conn, visit["id"])
         
         # Add pictures and tags to the profile data
         profile_data["pictures"] = [dict(pic) for pic in pictures]
@@ -682,20 +538,10 @@ async def get_user_matches(
         profile_data = dict(match)
         
         # Get profile pictures
-        pictures = await conn.fetch("""
-        SELECT id, profile_id, file_path, backend_url, is_primary
-        FROM profile_pictures
-        WHERE profile_id = $1
-        ORDER BY is_primary DESC, created_at ASC
-        """, match["id"])
+        pictures = await get_profile_pictures(conn, match["id"])
         
         # Get profile tags
-        tags = await conn.fetch("""
-        SELECT t.id, t.name
-        FROM tags t
-        JOIN profile_tags pt ON t.id = pt.tag_id
-        WHERE pt.profile_id = $1
-        """, match["id"])
+        tags = await get_profile_tags(conn, match["id"])
         
         # Add pictures and tags to the profile data
         profile_data["pictures"] = [dict(pic) for pic in pictures]
