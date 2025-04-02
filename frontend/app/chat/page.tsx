@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
 import { Metadata } from "next";
 import WebSocketService from "@/services/websocket";
+import { a } from "framer-motion/dist/types.d-6pKw1mTI";
 
 const metadata: Metadata = {
   title: "Mesajlar | CrushIt",
@@ -24,6 +25,7 @@ interface BlockStatus {
 
 interface ChatUser {
   id: string;
+  username: string;
   name: string;
   avatar: string;
   lastMessage: string;
@@ -360,6 +362,7 @@ const ChatPage = () => {
           setActiveChat(userIdFromUrl);
           setActiveChatUser({
             id: urlConversation.user.id,
+            username: urlConversation.user.username,
             name: `${urlConversation.user.first_name} ${urlConversation.user.last_name}`,
             avatar: urlConversation.profile_picture || '/images/defaults/man-default.png', // Profil fotoğrafını ekle
             lastMessage: urlConversation.recent_message?.content || 'Henüz mesaj yok',
@@ -376,6 +379,7 @@ const ChatPage = () => {
         setActiveChat(data[0].user.id);
         setActiveChatUser({
           id: data[0].user.id,
+          username: data[0].user.username,
           name: `${data[0].user.first_name} ${data[0].user.last_name}`,
           avatar: data[0].profile_picture || '/images/defaults/man-default.png', // Profil fotoğrafını ekle
           lastMessage: data[0].recent_message?.content || 'Henüz mesaj yok',
@@ -599,6 +603,7 @@ const ChatPage = () => {
 
         setActiveChatUser({
           id: conversation.user.id,
+          username: conversation.user.username,
           name: `${conversation.user.first_name} ${conversation.user.last_name}`,
           // Eğer bir profil fotoğrafı varsa onu kullan, yoksa mevcut avatar'ı veya varsayılanı kullan
           avatar: conversation.profile_picture || currentAvatar || '/images/defaults/man-default.png',
@@ -630,6 +635,7 @@ const ChatPage = () => {
           // Set active chat user data
           setActiveChatUser({
             id: urlConversation.user.id,
+            username: urlConversation.user.username,
             name: `${urlConversation.user.first_name} ${urlConversation.user.last_name}`,
             avatar: urlConversation.profile_picture || '/images/defaults/man-default.png',
             lastMessage: urlConversation.recent_message?.content || 'Henüz mesaj yok',
@@ -647,6 +653,7 @@ const ChatPage = () => {
         
         setActiveChatUser({
           id: conversations[0].user.id,
+          username: conversations[0].user.username,
           name: `${conversations[0].user.first_name} ${conversations[0].user.last_name}`,
           avatar: conversations[0].profile_picture || '/images/defaults/man-default.png',
           lastMessage: conversations[0].recent_message?.content || 'Henüz mesaj yok',
@@ -1078,6 +1085,7 @@ const ChatPage = () => {
                       }`}
                     onClick={() => handleSelectChat(conv.user.id, conv.user.username, {
                       id: conv.user.id,
+                      username: conv.user.username,
                       name: `${conv.user.first_name} ${conv.user.last_name}`,
                       avatar: conv.profile_picture || '/images/defaults/man-default.png',
                       lastMessage: conv.recent_message?.content || 'Henüz mesaj yok',
@@ -1254,10 +1262,20 @@ const ChatPage = () => {
                 <div className="flex flex-col h-full">
                   {/* Chat Header with Back Button on Mobile */}
                   <div className="sticky top-0 bg-[#2C2C2E] p-4 border-b border-[#3C3C3E] flex items-center justify-between z-10">
-                    <div className="flex items-center">
+                    <div 
+                      className="flex items-center cursor-pointer hover:bg-[#3C3C3E] p-2 rounded-lg transition-colors"
+                      onClick={() => {
+                        if (activeChatUser?.id) {
+                          router.push(`/profile/${activeChatUser?.username}`);
+                        }
+                      }}
+                    >
                       <button
                         className="lg:hidden mr-3 text-gray-400 hover:text-white"
-                        onClick={() => setActiveChat(null)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent navigating to profile when clicking back button
+                          setActiveChat(null);
+                        }}
                       >
                         <FiArrowLeft size={20} />
                       </button>
