@@ -84,7 +84,7 @@ alembic upgrade head
 ### 6. Populate the Database
 
 ```bash
-python -m populate.create_fake_users
+python -m populate.populate
 ```
 
 
