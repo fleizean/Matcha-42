@@ -2,9 +2,11 @@ import os
 import asyncio
 import uuid
 import random
+import hashlib
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 import asyncpg
+import httpx
 from faker import Faker
 from pathlib import Path
 import shutil
@@ -48,6 +50,70 @@ BIO_TEMPLATES = [
     "{}, {} ve {} hayatımın vazgeçilmezleri.",
     "{} yapmadan geçen bir günüm eksik sayılır. {} ve {} de ilgi alanlarım."
 ]
+
+# Image downloading functions
+def get_image_hash(image_data):
+    """Returns a unique hash for the given image data."""
+    return hashlib.md5(image_data).hexdigest()
+
+async def download_image(client, url, folder, seen_hashes, index):
+    """Download a single image and check for duplicates."""
+    try:
+        response = await client.get(url, timeout=10)
+        if response.status_code == 200:
+            image_hash = get_image_hash(response.content)
+            
+            if image_hash in seen_hashes:
+                print(f"Duplicate image detected, skipping {index+1}")
+                return False
+            
+            seen_hashes.add(image_hash)
+            image_path = os.path.join(folder, f"person_{len(seen_hashes)}.jpg")
+            with open(image_path, "wb") as file:
+                file.write(response.content)
+            print(f"Downloaded unique image {len(seen_hashes)}")
+            return True
+        else:
+            print(f"Failed to download image {index+1}, Status Code: {response.status_code}")
+            return False
+    except httpx.RequestError as e:
+        print(f"Error downloading image {index+1}: {e}")
+        return False
+
+async def download_images(folder: str, count: int = 500):
+    """
+    Downloads AI-generated faces from 'thispersondoesnotexist.com' while ensuring uniqueness.
+    
+    :param folder: The directory where images will be saved.
+    :param count: The number of unique images to download.
+    """
+    print(f"Starting download of {count} unique AI-generated faces...")
+    
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    
+    url = "https://thispersondoesnotexist.com/"
+    seen_hashes = set()
+    
+    async with httpx.AsyncClient() as client:
+        index = 0
+        attempt_count = 0
+        max_attempts = count * 2  # Set a maximum attempt limit to avoid infinite loops
+        
+        while len(seen_hashes) < count and attempt_count < max_attempts:
+            success = await download_image(client, url, folder, seen_hashes, index)
+            index += 1
+            attempt_count += 1
+            
+            if success:
+                # Add a small delay to avoid overwhelming the server
+                await asyncio.sleep(0.5)
+            else:
+                # Longer delay if there was an error
+                await asyncio.sleep(1)
+    
+    print(f"Downloaded {len(seen_hashes)} unique images after {attempt_count} attempts")
+    return len(seen_hashes)
 
 # Function to generate a secure password hash
 def get_password_hash(password: str) -> str:
@@ -100,11 +166,12 @@ async def copy_profile_picture(profile_id: str, image_file: str) -> str:
 def get_face_images() -> List[str]:
     """Get all image files from the faces directory"""
     if not os.path.exists(FACES_DIR):
-        raise FileNotFoundError(f"Directory {FACES_DIR} not found")
+        print(f"Directory {FACES_DIR} not found, it will be created")
+        return []
     
     image_files = []
     for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif']:
-        #pattern = os.path.join(FACES_DIR, ext)
+        pattern = os.path.join(FACES_DIR, ext)
         image_files.extend([os.path.basename(p) for p in Path(FACES_DIR).glob(ext)])
     
     return image_files
@@ -210,17 +277,39 @@ async def create_users_batch(
         # Log progress
         print(f"Created user {start_idx + i + 1}/500: {username}")
 
+async def ensure_enough_images(count: int) -> List[str]:
+    """
+    Ensures that enough face images are available for user generation.
+    Downloads more if needed.
+    """
+    # Check existing images
+    face_images = get_face_images()
+    
+    # If we don't have enough images, download more
+    if len(face_images) < count:
+        needed_images = count - len(face_images)
+        print(f"Found {len(face_images)} images, need {needed_images} more")
+        await download_images(FACES_DIR, needed_images)
+        
+        # Refresh the list of available images
+        face_images = get_face_images()
+    
+    if len(face_images) < count:
+        print(f"Warning: Could only get {len(face_images)} images, which is less than the requested {count}")
+    
+    return face_images
+
 async def generate_fake_users(count: int = 500) -> None:
     """Generate fake users with profile pictures"""
     print(f"Generating {count} fake users...")
     
-    # Get face images
-    face_images = get_face_images()
+    # Ensure we have enough images
+    face_images = await ensure_enough_images(count)
     if not face_images:
-        print("No face images found in the downloaded_faces directory!")
+        print("No face images available and failed to download any!")
         return
     
-    print(f"Found {len(face_images)} face images")
+    print(f"Using {len(face_images)} face images")
     
     # Connect to database
     print(f"Connecting to database: {DATABASE_URL}")
