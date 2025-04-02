@@ -22,6 +22,7 @@ fake = Faker(['tr_TR'])
 
 # Database connection using env variable
 DATABASE_URL = os.getenv('DATABASE_URL')
+FAKE_PASSWORD = "password123"  # Same password for all test users
 
 # Örnek tag listesi
 SAMPLE_TAGS = [
@@ -178,7 +179,7 @@ async def create_fake_users_with_existing_pictures(count=50):
                 
                 username = f"{first_name_safe.lower()}{fake.random_number(digits=4)}"
                 email = f"{username}@{fake.domain_name()}"
-                password = "password123"  # Same password for all test users
+                password = FAKE_PASSWORD  # Same password for all test users
                 print("Creating user: ", username)
                 # Create user
                 user_id = str(uuid.uuid4())
@@ -373,6 +374,6 @@ if __name__ == "__main__":
     import asyncio
     
     # Choose which function to run based on your needs
-    asyncio.run(create_fake_users_with_existing_pictures(250))
+    asyncio.run(create_fake_users_with_existing_pictures(100))
     # or
     # asyncio.run(create_fake_users_with_ai_pictures(200))

@@ -489,7 +489,7 @@ const ChatPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is_blocked?blocked_username=${username}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked?blocked_username=${username}`,
         {
           method: 'POST',
           headers: {

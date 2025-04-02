@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from typing import List, Optional
 import uuid
 import os
@@ -9,10 +8,10 @@ import shutil
 from app.core.db import get_connection
 from app.core.security import get_current_verified_user
 from app.core.config import settings
-from app.validation.profile import validate_profile_update, validate_tags
 from app.db.profiles import get_profile_pictures, get_profile_tags, get_suggested_profiles, update_fame_rating
 from app.db.realtime import create_notification
 from app.api.realtime import broadcast_notification, manager
+from app.models.request.profiles import LikedStatusRequest, LocationUpdateRequest, ProfileUpdateRequest, UpdateTagsRequest
 
 router = APIRouter()
 
@@ -49,21 +48,11 @@ async def get_my_profile(
 
 @router.put("/me")
 async def update_my_profile(
-    request: Request,
+    profile_data: ProfileUpdateRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
     """Update current user's profile"""
-    data = await request.json()
-    
-    # Validate profile data
-    is_valid, errors = validate_profile_update(data)
-    if not is_valid:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": errors}
-        )
-    
     # Get current profile
     profile = await conn.fetchrow("""
     SELECT id FROM profiles
@@ -74,6 +63,16 @@ async def update_my_profile(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found"
+        )
+    
+    # Convert Pydantic model to dict for database operations
+    data = profile_data.dict(exclude_unset=True)
+    
+    # If no fields to update, return early
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update"
         )
     
     # Build update query based on provided fields
@@ -89,15 +88,12 @@ async def update_my_profile(
         elif key == "birth_date" and value:
             # Convert birth_date string to datetime object
             try:
-                if isinstance(value, str):
-                    birth_date = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                else:
-                    birth_date = value
+                birth_date = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 update_fields.append(f"{key} = ${param_idx}")
                 params.append(birth_date)
                 param_idx += 1
             except ValueError:
-                # Skip invalid date
+                # Skip invalid date (though this should be caught by validator)
                 pass
     
     # Add updated_at field
@@ -106,11 +102,11 @@ async def update_my_profile(
     param_idx += 1
     
     # Check if profile would be complete after this update
-    gender = data.get("gender", None)
-    sexual_preference = data.get("sexual_preference", None)
-    biography = data.get("biography", None)
-    latitude = data.get("latitude", None)
-    longitude = data.get("longitude", None)
+    gender = data.get("gender")
+    sexual_preference = data.get("sexual_preference")
+    biography = data.get("biography")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
     
     # Get existing values if not in update
     if gender is None or sexual_preference is None or biography is None or latitude is None or longitude is None:
@@ -119,11 +115,11 @@ async def update_my_profile(
         FROM profiles WHERE id = $1
         """, profile["id"])
         
-        gender = gender or existing["gender"]
-        sexual_preference = sexual_preference or existing["sexual_preference"]
-        biography = biography or existing["biography"]
-        latitude = latitude or existing["latitude"]
-        longitude = longitude or existing["longitude"]
+        gender = gender if gender is not None else existing["gender"]
+        sexual_preference = sexual_preference if sexual_preference is not None else existing["sexual_preference"]
+        biography = biography if biography is not None else existing["biography"]
+        latitude = latitude if latitude is not None else existing["latitude"]
+        longitude = longitude if longitude is not None else existing["longitude"]
     
     # Get picture count
     pic_count = await conn.fetchval("""
@@ -190,21 +186,11 @@ async def update_my_profile(
 
 @router.put("/me/tags")
 async def update_my_tags(
-    request: Request,
+    tags_data: UpdateTagsRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
     """Update current user's profile tags"""
-    data = await request.json()
-    tags = data.get("tags", [])
-    
-    # Validate tags
-    is_valid, errors = validate_tags(tags)
-    if not is_valid:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": errors}
-        )
     
     # Get profile
     profile = await conn.fetchrow("""
@@ -227,7 +213,7 @@ async def update_my_tags(
         """, profile["id"])
         
         # Add new tags
-        for tag_name in tags:
+        for tag_name in tags_data.tags:
             # Check if tag exists
             tag_id = await conn.fetchval("""
             SELECT id FROM tags
@@ -260,7 +246,7 @@ async def update_my_tags(
         """, profile["id"])
         
         is_complete = (
-            len(tags) > 0 and 
+            len(tags_data.tags) > 0 and 
             pic_count > 0 and
             existing["gender"] is not None and 
             existing["sexual_preference"] is not None and 
@@ -296,14 +282,13 @@ async def update_my_tags(
 
 @router.put("/me/location")
 async def update_location(
-    request: Request,
+    location_data: LocationUpdateRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
     """Update current user's location"""
-    data = await request.json()
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
+    latitude = location_data.latitude
+    longitude = location_data.longitude
     
     if latitude is None or longitude is None:
         raise HTTPException(
@@ -657,20 +642,20 @@ async def get_suggested(
     min_fame: Optional[float] = None,
     max_fame: Optional[float] = None,
     max_distance: Optional[float] = None,
-        tags: Optional[List[str]] = Query(
-        None, 
-        description="List of tags to filter by",
-        example=["music", "kitap"],
-        openapi_examples={
-            "single_tag": {
-                "summary": "Single tag filter",
-                "value": ["music"]
-            },
-            "multiple_tags": {
-                "summary": "Multiple tag filter",
-                "value": ["music", "kitap", "spor"]
-            }
+    tags: Optional[List[str]] = Query(
+    None, 
+    description="List of tags to filter by",
+    example=["music", "kitap"],
+    openapi_examples={
+        "single_tag": {
+            "summary": "Single tag filter",
+            "value": ["music"]
+        },
+        "multiple_tags": {
+            "summary": "Multiple tag filter",
+            "value": ["music", "kitap", "spor"]
         }
+    }
     ),
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
@@ -938,7 +923,7 @@ async def check_real_profile(
 
 @router.put("/me/delete-account")
 async def delete_account(
-    request: Request,
+    password: str,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
@@ -946,9 +931,6 @@ async def delete_account(
     Delete user account
     """
     try:
-        # Parse request body
-        data = await request.json()
-        password = data.get("password")
         
         if not password:
             raise HTTPException(
@@ -1017,7 +999,7 @@ async def delete_account(
 
 @router.post("/liked-status")
 async def get_liked_status_batch(
-    request: Request,
+    profile_ids: LikedStatusRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
@@ -1027,9 +1009,6 @@ async def get_liked_status_batch(
     Output: List of profile IDs that the current user has liked
     """
     try:
-        # Get request body
-        data = await request.json()
-        profile_ids = data.get("profileIds", [])
         
         if not profile_ids:
             return {"likedProfiles": []}
@@ -1051,7 +1030,7 @@ async def get_liked_status_batch(
         liked_profiles = await conn.fetch("""
         SELECT liked_id FROM likes
         WHERE liker_id = $1 AND liked_id = ANY($2)
-        """, user_profile["id"], profile_ids)
+        """, user_profile["id"], profile_ids.profileIds)
         
         # Extract just the IDs into a list
         liked_profile_ids = [str(row["liked_id"]) for row in liked_profiles]

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from typing import Dict, Any
 import json
 import logging
@@ -20,6 +20,7 @@ from app.db.realtime import (
 
 
 from app.db.users import update_last_activity
+from app.models.request.realtime import MessageRequest
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -295,23 +296,22 @@ async def mark_all_notifications_read(
     conn = Depends(get_connection)
 ):
     """Mark all notifications as read"""
-    await mark_all_notifications_as_read(conn, current_user["id"])
+    many = await mark_all_notifications_as_read(conn, current_user["id"])
     
     return {
-        "message": "All notifications marked as read"
+        "message": f"All notifications({many}) marked as read"
     }
 
 
 @router.post("/messages")
 async def create_message(
-    request: Request,
+    message_data: MessageRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
 ):
     """Send a message to another user"""
-    data = await request.json()
-    recipient_id = data.get("recipient_id")
-    content = data.get("content")
+    recipient_id = message_data.recipient_id
+    content = message_data.content
     
     if not recipient_id or not content:
         raise HTTPException(

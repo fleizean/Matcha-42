@@ -894,7 +894,7 @@ const SettingsPage = () => {
           <div className="bg-[#2C2C2E] rounded-xl p-4 space-y-2">
             <TabButton value="account" icon={FiUser} label="Hesap Ayarları" />
             <TabButton value="privacy" icon={FiLock} label="Gizlilik" />
-            <TabButton value="notifications" icon={FiBell} label="Bildirimler" />
+{/*             <TabButton value="notifications" icon={FiBell} label="Bildirimler" /> */}
             <TabButton value="blocked" icon={FiUserX} label="Engellenen Kullanıcılar" />
           </div>
           {/* Content */}
@@ -1280,7 +1280,7 @@ const SettingsPage = () => {
                 </div>
               )}
               {/* Notifications Tab */}
-              {activeTab === "notifications" && (
+{/*               {activeTab === "notifications" && (
                 <div>
                   <h2 className="text-2xl font-semibold text-white mb-6">Bildirimler</h2>
                   <div className="space-y-8">
@@ -1323,7 +1323,7 @@ const SettingsPage = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Blocked Users Tab */}
               {activeTab === "blocked" && (

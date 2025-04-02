@@ -323,7 +323,7 @@ const ProfilePage = () => {
         fetchProfile(),
         // Block durumunu kontrol et
         fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block/status/${profile.id}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked/${profile.username}`,
           {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,
@@ -656,7 +656,7 @@ const ProfilePage = () => {
 
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is_blocked?blocked_username=${params.username}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked?blocked_username=${params.username}`,
           {
             method: 'POST',
             headers: {

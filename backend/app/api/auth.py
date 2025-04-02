@@ -1,82 +1,83 @@
 import json
-from typing import Any
+from typing import Any, Dict
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.db import get_connection
 from app.core.security import create_access_token, create_refresh_token, get_current_user, verify_password, get_password_hash
-from app.validation.user import validate_password, validate_user_create
 from app.db import users, profiles
 from app.services.email import send_verification_email, send_password_reset_email
 
 import secrets
 from app.core.oauth import OAuth42Provider
+from app.models.request.auth import ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, OAuthRequest, RefreshTokenRequest, RegisterRequest, ResetPasswordRequest, VerifyTokenRequest
+from app.models.response.auth import MessageResponse, OAuthResponse, OAuthorizeResponse, TokenResponse
 
 router = APIRouter()
 
-@router.post("/register", response_model=dict)
+@router.post("/register", response_model=MessageResponse)
 async def register(
-    request: Request,
+    user_data: RegisterRequest,
     conn = Depends(get_connection)
-) -> Any:
+) -> Dict[str, str]:
     """
     Register a new user
     """
-    data = await request.json()
-    
-    # Validate user data
-    is_valid, errors = validate_user_create(data)
-    if not is_valid:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": errors}
-        )
-    
     # Check if username already exists
-    existing_user = await users.get_user_by_username(conn, data["username"])
+    existing_user = await users.get_user_by_username(conn, user_data.username)
     if existing_user:
-        return JSONResponse(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": "This username is already registered"}
+            detail="This username is already registered"
         )
     
     # Check if email already exists
-    existing_email = await users.get_user_by_email(conn, data["email"])
+    existing_email = await users.get_user_by_email(conn, user_data.email)
     if existing_email:
-        return JSONResponse(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": "This email is already registered"}
+            detail="This email is already registered"
         )
     
     # Generate verification token
     verification_token = str(uuid.uuid4())
     
     # Create user with verification token
-    user_data = {
-        "username": data["username"],
-        "email": data["email"],
-        "first_name": data["first_name"],
-        "last_name": data["last_name"],
-        "password": data["password"],
+    user_info = {
+        "username": user_data.username,
+        "email": user_data.email,
+        "first_name": user_data.first_name,
+        "last_name": user_data.last_name,
+        "password": user_data.password,
         "verification_token": verification_token
     }
     
-    user_id = await users.create_user(conn, user_data)
-    
-    # Create empty profile
-    await profiles.create_profile(conn, user_id)
-    
-    # Send verification email
-    await send_verification_email(data["email"], data["username"], verification_token)
-    
-    return {
-        "message": "User registered successfully. Please check your email to verify your account."
-    }
+    try:
+        # Create user in database
+        user_id = await users.create_user(conn, user_info)
+        
+        # Create empty profile
+        await profiles.create_profile(conn, user_id)
+        
+        # Send verification email
+        await send_verification_email(user_data.email, user_data.username, verification_token)
+        
+        return MessageResponse(
+            message="User registered successfully. Please check your email to verify your account."
+        )
+    except Exception as e:
+        # Log the error
+        import logging
+        logging.error(f"Error during registration: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed. Please try again later."
+        )
 
-@router.post("/login", response_model=dict)
+@router.post("/login", response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     conn = Depends(get_connection)
@@ -118,35 +119,38 @@ async def login(
     # Update user's last login and online status
     await users.update_last_activity(conn, user["id"], True)
     
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer"
+    )
 
 # Initialize OAuth provider
 oauth42 = OAuth42Provider()
 
-@router.get("/oauth/42")
+@router.get("/oauth/42", response_model=OAuthorizeResponse)
 async def oauth_42_authorize():
     """Start 42 OAuth flow"""
     # Generate a random state to prevent CSRF attacks
     state = secrets.token_urlsafe(32)
     authorize_url = oauth42.get_authorize_url(state)
     
-    return {"authorize_url": authorize_url, "state": state}
+    return OAuthorizeResponse(
+        authorize_url=authorize_url,
+        state=state
+    )
 
-@router.post("/oauth/42/callback")
+
+@router.post("/oauth/42/callback", response_model=OAuthResponse)
 async def oauth_42_callback(
-    request: Request,
+    oauth_data: OAuthRequest,
     conn = Depends(get_connection)
 ):
     """Handle 42 OAuth callback"""
     try:
         # Extract code and state from request body
-        data = await request.json()
-        code = data.get("code")
-        state = data.get("state")
+        code = oauth_data.code
+        state = oauth_data.state
         
         if not code or not state:
             return JSONResponse(
@@ -242,12 +246,12 @@ async def oauth_42_callback(
             # Update last login
             await users.update_last_activity(conn, existing_user["id"], True)
             
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "token_type": "bearer",
-                "is_new_user": False
-            }
+            return OAuthResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer",
+                is_new_user=False
+            )
         
         # User doesn't exist, create a new user
         else:
@@ -305,12 +309,12 @@ async def oauth_42_callback(
                 # Update last login
                 await users.update_last_activity(conn, user_id, True)
             
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "token_type": "bearer",
-                "is_new_user": True
-            }
+            return OAuthResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer",
+                is_new_user=True
+            )
             
     except Exception as e:
         return JSONResponse(
@@ -318,23 +322,16 @@ async def oauth_42_callback(
             content={"detail": f"OAuth callback error: {str(e)}"}
         )
 
-@router.post("/login/json", response_model=dict)
+@router.post("/login/json", response_model=TokenResponse)
 async def login_json(
-    request: Request,
+    login_data: LoginRequest,
     conn = Depends(get_connection)
 ) -> Any:
     """
     JSON compatible login (alternative to OAuth2)
     """
-    data = await request.json()
-    username = data.get("username")
-    password = data.get("password")
-    
-    if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username and password are required"
-        )
+    username = login_data.username
+    password = login_data.password
     
     # Get user by username
     user = await users.get_user_by_username(conn, username)
@@ -366,24 +363,22 @@ async def login_json(
     # Update user's last login and online status
     await users.update_last_activity(conn, user["id"], True)
     
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer"
+    )
 
-@router.post("/refresh", response_model=dict)
+@router.post("/refresh", response_model=TokenResponse)
 async def refresh_token_endpoint(
-    request: Request,
+    token_data: RefreshTokenRequest,
     conn = Depends(get_connection)
 ) -> Any:
     """
     Refresh access token using refresh token
     """
-    data = await request.json()
-    refresh_token = data.get("refresh_token")
     
-    if not refresh_token:
+    if not token_data.refresh_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Refresh token is required"
@@ -394,7 +389,7 @@ async def refresh_token_endpoint(
     SELECT id FROM users
     WHERE refresh_token = $1 AND refresh_token_expires > $2
     """
-    user_id = await conn.fetchval(query, refresh_token, datetime.now(timezone.utc))
+    user_id = await conn.fetchval(query, token_data.refresh_token, datetime.now(timezone.utc))
     
     if not user_id:
         raise HTTPException(
@@ -411,14 +406,14 @@ async def refresh_token_endpoint(
     # Update refresh token in database
     await users.update_refresh_token(conn, user_id, new_refresh_token)
     
-    return {
-        "access_token": access_token,
-        "refresh_token": new_refresh_token,
-        "token_type": "bearer"
-    }
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+        token_type="bearer"
+    )
 
 
-@router.get("/verify", response_model=dict)
+@router.get("/verify", response_model=MessageResponse)
 async def verify_email(
     token: str,
     conn = Depends(get_connection)
@@ -435,27 +430,20 @@ async def verify_email(
             detail="Geçersiz veya süresi dolmuş onay kodu"
         )
     
-    return {
-        "message": "Başarıyla onaylandı. Artık giriş yapabilirsiniz."
-    }
+    return MessageResponse(
+        message="Email onaylandı. Artık giriş yapabilirsiniz."
+    )
 
-@router.post("/forgot-password", response_model=dict)
+@router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(
-    request: Request,
+    forgot_password_data: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     conn = Depends(get_connection)
 ) -> Any:
     """
     Request password reset
     """
-    data = await request.json()
-    email = data.get("email")
-    
-    if not email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is required"
-        )
+    email = forgot_password_data.email
     
     # Process in background to prevent timing attacks
     async def _request_password_reset(email: str):
@@ -483,105 +471,94 @@ async def forgot_password(
     
     background_tasks.add_task(_request_password_reset, email)
     
-    return {
-        "message": "If your email is registered, you will receive password reset instructions."
-    }
+    return MessageResponse(
+        message="If your email is registered, you will receive password reset instructions."
+    )
 
-@router.post("/reset-password", response_model=dict)
+@router.post("/reset-password", response_model=MessageResponse)
 async def reset_password_route(
-    request: Request,
+    reset_data: ResetPasswordRequest,
     conn = Depends(get_connection)
-) -> Any:
+) -> Dict[str, str]:
     """
     Reset password with token
+    
+    - **token**: Password reset token sent via email
+    - **new_password**: New password that meets security requirements
     """
-    data = await request.json()
-    token = data.get("token")
-    new_password = data.get("new_password")
-    
-    if not token or not new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token and new password are required"
+    try:
+        # Reset password
+        user = await conn.fetchrow("""
+        UPDATE users
+        SET hashed_password = $2, reset_password_token = NULL, updated_at = $3
+        WHERE reset_password_token = $1
+        RETURNING id
+        """, reset_data.token, get_password_hash(reset_data.new_password), datetime.now(timezone.utc))
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token"
+            )
+        
+        return MessageResponse(
+            message="Password reset successfully. You can now log in with your new password."
         )
-    
-    # Validate password
-    is_valid, msg = validate_password(new_password)
-    if not is_valid:
+    except Exception as e:       
+        # If it's our HTTPException, re-raise it
+        if isinstance(e, HTTPException):
+            raise
+            
+        # Otherwise, return a generic error
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=msg
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset failed. Please try again later."
         )
-    
-    # Reset password
-    user = await conn.fetchrow("""
-    UPDATE users
-    SET hashed_password = $2, reset_password_token = NULL, updated_at = $3
-    WHERE reset_password_token = $1
-    RETURNING id
-    """, token, get_password_hash(new_password), datetime.now(timezone.utc))
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token"
-        )
-    
-    return {
-        "message": "Password reset successfully. You can now log in with your new password."
-    }
 
-@router.post("/change-password", response_model=dict)
+@router.post("/change-password", response_model=MessageResponse)
 async def change_password_route(
-    request: Request,
+    change_data: ChangePasswordRequest,
     current_user = Depends(get_current_user),
     conn = Depends(get_connection)
 ) -> Any:
     """
     Change password
     """
-    data = await request.json()
-    current_password = data.get("current_password")
-    new_password = data.get("new_password")
-    
-    if not current_password or not new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password and new password are required"
+    try:
+        # Get user with password
+        user = await conn.fetchrow("""
+        SELECT hashed_password FROM users WHERE id = $1
+        """, current_user["id"])
+        
+        # Verify current password
+        if not verify_password(change_data.current_password, user["hashed_password"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incorrect current password"
+            )
+        
+        # Update password
+        await conn.execute("""
+        UPDATE users
+        SET hashed_password = $2, updated_at = $3
+        WHERE id = $1
+        """, current_user["id"], get_password_hash(change_data.new_password), datetime.now(timezone.utc))
+        
+        return MessageResponse(
+            message="Password changed successfully"
         )
-    
-    # Validate new password
-    is_valid, msg = validate_password(new_password)
-    if not is_valid:
+    except Exception as e:       
+        # If it's our HTTPException, re-raise it
+        if isinstance(e, HTTPException):
+            raise
+            
+        # Otherwise, return a generic error
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=msg
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password change failed. Please try again later."
         )
-    
-    # Get user with password
-    user = await conn.fetchrow("""
-    SELECT hashed_password FROM users WHERE id = $1
-    """, current_user["id"])
-    
-    # Verify current password
-    if not verify_password(current_password, user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect current password"
-        )
-    
-    # Update password
-    await conn.execute("""
-    UPDATE users
-    SET hashed_password = $2, updated_at = $3
-    WHERE id = $1
-    """, current_user["id"], get_password_hash(new_password), datetime.now(timezone.utc))
-    
-    return {
-        "message": "Password changed successfully"
-    }
 
-@router.post("/logout", response_model=dict)
+@router.post("/logout", response_model=MessageResponse)
 async def logout(
     current_user = Depends(get_current_user),
     conn = Depends(get_connection)
@@ -596,6 +573,6 @@ async def logout(
     WHERE id = $1
     """, current_user["id"], datetime.now(timezone.utc))
     
-    return {
-        "message": "Logged out successfully"
-    }
+    return MessageResponse(
+        message="Logged out successfully"
+    )

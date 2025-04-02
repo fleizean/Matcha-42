@@ -1,12 +1,12 @@
 # app/api/users.py
-from typing import Any
-from fastapi import APIRouter, Depends, status, Request
-from fastapi.responses import JSONResponse
+from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.db import get_connection
 from app.core.security import get_current_user, get_current_verified_user
-from app.validation.user import validate_user_update
 from app.db import users
+from app.models.request.users import UserUpdateRequest
+from app.models.response.users import UserResponse
 
 router = APIRouter()
 
@@ -19,50 +19,47 @@ async def read_user_me(
     """
     return current_user
 
-@router.put("/me", response_model=dict)
+@router.put("/me", response_model=UserResponse)
 async def update_user_me(
-    request: Request,
+    user_data: UserUpdateRequest,
     current_user = Depends(get_current_verified_user),
     conn = Depends(get_connection)
-) -> Any:
+) -> Dict[str, Any]:
     """
-    Update current user
+    Update current user information
     """
-    data = await request.json()
+    # Convert Pydantic model to dict for database operations
+    data = user_data.model_dump(exclude_unset=True, exclude_none=True)
     
-    # Validate user data
-    is_valid, errors = validate_user_update(data)
-    if not is_valid:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": errors}
-        )
+    # If no fields to update, return early
+    if not data:
+        return dict(current_user)
     
     # Check if username is being changed and if it's already taken
-    if data.get("username") and data["username"] != current_user["username"]:
+    if "username" in data and data["username"] != current_user["username"]:
         existing_user = await users.get_user_by_username(conn, data["username"])
         if existing_user:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Username already taken"}
+                detail="Username already taken"
             )
     
     # Check if email is being changed and if it's already taken
-    if data.get("email") and data["email"] != current_user["email"]:
+    if "email" in data and data["email"] != current_user["email"]:
         existing_email = await users.get_user_by_email(conn, data["email"])
         if existing_email:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Email already registered"}
+                detail="Email already registered"
             )
     
     # Update user
     updated_user = await users.update_user(conn, current_user["id"], data)
     
     if not updated_user:
-        return JSONResponse(
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Failed to update user"}
+            detail="Failed to update user"
         )
     
     return dict(updated_user)
