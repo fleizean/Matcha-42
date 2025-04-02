@@ -160,9 +160,35 @@ const SettingsPage = () => {
 
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
-
+  const [isOAuth, setIsOAuth] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<PublicProfile[]>([]);
   const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
+
+  const isOAuthUser = async (accessToken: string): Promise<boolean> => {
+    try {
+      // Get user's OAuth connections
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me/oauth`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        }
+      );
+  
+      if (!response.ok) {
+        console.error('Failed to check OAuth status');
+        return false;
+      }
+  
+      const data = await response.json();
+      // Return true if user has any OAuth connections
+      return data.has_oauth_connections || false;
+    } catch (error) {
+      console.error('Error checking OAuth status:', error);
+      return false;
+    }
+  };
 
   // Add fetch function
   const fetchBlockedUsers = async () => {
@@ -232,8 +258,118 @@ const SettingsPage = () => {
   useEffect(() => {
     if (session?.user?.accessToken) {
       fetchProfile();
+      
+      // Check if user is an OAuth user
+      const checkOAuthStatus = async () => {
+        const oauthStatus = await isOAuthUser(session.user.accessToken);
+        setIsOAuth(oauthStatus);
+      };
+      
+      checkOAuthStatus();
     }
   }, [session]);
+
+  // Modified account deletion modal for OAuth users
+  const renderDeleteAccountModal = () => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-[#2C2C2E] p-6 rounded-lg max-w-md w-full mx-4">
+          <h3 className="text-xl font-semibold text-white mb-4">Hesap Silme Onayı</h3>
+          
+          {isOAuth ? (
+            <>
+              <p className="text-gray-400 mb-4">
+                42 hesabıyla giriş yaptığınız için şifre doğrulamasına gerek yok. Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  className="px-4 py-2 bg-[#3C3C3E] text-white rounded-lg hover:bg-[#4C4C4E]"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  İptal
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                  onClick={handleOAuthAccountDelete}
+                >
+                  Hesabı Sil
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-400 mb-4">
+                Hesabınızı silmek için lütfen şifrenizi girin. Bu işlem geri alınamaz.
+              </p>
+              <div className="space-y-4">
+                <input
+                  type="password"
+                  ref={passwordInputRef}
+                  value={deletePassword}
+                  onChange={handleDeletePasswordChange}
+                  placeholder="Şifrenizi girin"
+                  className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                />
+                <div className="flex justify-end space-x-3">
+                  <button
+                    className="px-4 py-2 bg-[#3C3C3E] text-white rounded-lg hover:bg-[#4C4C4E]"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeletePassword("");
+                    }}
+                  >
+                    İptal
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    onClick={handleDeleteAccount}
+                  >
+                    Hesabı Sil
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Add this function for OAuth account deletion
+  const handleOAuthAccountDelete = async () => {
+    if (!session?.user?.accessToken) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/delete-oauth-account`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.user.accessToken}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Hesap silme işlemi başarısız');
+      }
+
+      // Account successfully deleted, logout user
+      toast.success('Hesabınız başarıyla silindi');
+      setShowDeleteModal(false);
+
+      // Redirect to home page after short delay
+      setTimeout(() => {
+        signOut({ callbackUrl: '/' });
+      }, 2000);
+
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Hesap silme işlemi başarısız');
+      console.error('Account deletion error:', error);
+    }
+  };
 
   const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -1177,52 +1313,60 @@ const SettingsPage = () => {
                 <div>
                   <h2 className="text-2xl font-semibold text-white mb-6">Gizlilik</h2>
                   <div className="space-y-8">
-                    {/* Password Change Section */}
-                    <div className="border-b border-[#3C3C3E] pb-6">
-                      <h3 className="text-xl font-semibold text-white mb-4">Şifre Değiştir</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-gray-300 mb-2">Mevcut Şifre</label>
-                          <input
-                            type="password"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Mevcut şifrenizi girin"
-                            className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-gray-300 mb-2">Yeni Şifre</label>
-                          <input
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Yeni şifrenizi girin"
-                            className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-gray-300 mb-2">Yeni Şifre (Tekrar)</label>
-                          <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Yeni şifrenizi tekrar girin"
-                            className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
-                          />
-                        </div>
-                        <div className="flex justify-start space-x-3">
-
-                          <button
-                            className="bg-[#D63384] text-white py-2 px-4 rounded-lg hover:bg-[#D63384] transition-colors"
-                            onClick={handlePasswordChange}
-                            type="button"
-                          >
-                            Şifreyi Değiştir
-                          </button>
-                        </div>
-                      </div>
+              {/* Password Change Section */}
+              <div className="border-b border-[#3C3C3E] pb-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Şifre Değiştir</h3>
+                
+                {isOAuth ? (
+                  <div className="p-4 bg-[#3C3C3E] rounded-lg">
+                    <p className="text-gray-300">
+                      42 hesabıyla giriş yaptığınız için şifre değiştirme özelliği kullanılamaz.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Mevcut Şifre</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Mevcut şifrenizi girin"
+                        className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                      />
                     </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Yeni Şifre</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Yeni şifrenizi girin"
+                        className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Yeni Şifre (Tekrar)</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Yeni şifrenizi tekrar girin"
+                        className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                      />
+                    </div>
+                    <div className="flex justify-start space-x-3">
+                      <button
+                        className="bg-[#D63384] text-white py-2 px-4 rounded-lg hover:bg-[#D63384] transition-colors"
+                        onClick={handlePasswordChange}
+                        type="button"
+                      >
+                        Şifreyi Değiştir
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
                     {/* Account Deletion Section */}
                     <div>
@@ -1240,43 +1384,7 @@ const SettingsPage = () => {
                   </div>
 
                   {/* Delete Account Modal */}
-                  {showDeleteModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-[#2C2C2E] p-6 rounded-lg max-w-md w-full mx-4">
-                        <h3 className="text-xl font-semibold text-white mb-4">Hesap Silme Onayı</h3>
-                        <p className="text-gray-400 mb-4">
-                          Hesabınızı silmek için lütfen şifrenizi girin. Bu işlem geri alınamaz.
-                        </p>
-                        <div className="space-y-4">
-                          <input
-                            type="password"
-                            ref={passwordInputRef}
-                            value={deletePassword}
-                            onChange={handleDeletePasswordChange}
-                            placeholder="Şifrenizi girin"
-                            className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
-                          />
-                          <div className="flex justify-end space-x-3">
-                            <button
-                              className="px-4 py-2 bg-[#3C3C3E] text-white rounded-lg hover:bg-[#4C4C4E]"
-                              onClick={() => {
-                                setShowDeleteModal(false);
-                                setDeletePassword("");
-                              }}
-                            >
-                              İptal
-                            </button>
-                            <button
-                              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                              onClick={handleDeleteAccount}
-                            >
-                              Hesabı Sil
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {showDeleteModal && renderDeleteAccountModal()}
                 </div>
               )}
               {/* Notifications Tab */}

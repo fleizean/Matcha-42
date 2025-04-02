@@ -64,6 +64,24 @@ async def update_user_me(
     
     return dict(updated_user)
 
+@router.get("/me/oauth")
+async def get_user_oauth_status(
+    current_user = Depends(get_current_user),
+    conn = Depends(get_connection)
+) -> Dict[str, bool]:
+    """
+    Check if the current user has any OAuth connections
+    """
+    # Check if user has any OAuth connections
+    oauth_connections = await conn.fetchval("""
+    SELECT COUNT(*) FROM oauth_connections
+    WHERE user_id = $1
+    """, current_user["id"])
+    
+    return {
+        "has_oauth_connections": oauth_connections > 0
+    }
+
 @router.post("/heartbeat", response_model=dict)
 async def user_heartbeat(
     current_user = Depends(get_current_user),

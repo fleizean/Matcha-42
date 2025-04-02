@@ -996,6 +996,68 @@ async def delete_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting account: {str(e)}"
         )    
+    
+# Add this endpoint to backend/app/api/profiles.py
+
+@router.put("/me/delete-oauth-account")
+async def delete_oauth_account(
+    current_user = Depends(get_current_verified_user),
+    conn = Depends(get_connection)
+):
+    """
+    Delete user account for OAuth users (no password required)
+    """
+    try:
+        # Check if the user has OAuth connections
+        oauth_connections = await conn.fetchval("""
+        SELECT COUNT(*) FROM oauth_connections
+        WHERE user_id = $1
+        """, current_user["id"])
+        
+        if oauth_connections == 0:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This endpoint is only for OAuth users"
+            )
+        
+        # Get profile
+        profile = await conn.fetchrow("""
+        SELECT id FROM profiles
+        WHERE user_id = $1
+        """, current_user["id"])
+        
+        if profile:
+            # Get profile pictures
+            pictures = await conn.fetch("""
+            SELECT id, file_path FROM profile_pictures
+            WHERE profile_id = $1
+            """, profile["id"])
+            
+            # Delete physical picture files
+            for picture in pictures:
+                file_path = os.path.join(settings.MEDIA_ROOT, picture["file_path"])
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+        
+        # Start a transaction
+        async with conn.transaction():
+            # The profile and related data will be deleted by cascading constraints
+            
+            # Delete user
+            await conn.execute("""
+            DELETE FROM users
+            WHERE id = $1
+            """, current_user["id"])
+        
+        return {"message": "Hesap başarıyla silindi"}
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error in delete_oauth_account: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting account: {str(e)}"
+        )
 
 @router.post("/liked-status")
 async def get_liked_status_batch(
