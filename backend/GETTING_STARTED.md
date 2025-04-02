@@ -84,7 +84,7 @@ alembic upgrade head
 ### 6. Populate the Database
 
 ```bash
-python -m populate.populate
+python -m populate
 ```
 
 
