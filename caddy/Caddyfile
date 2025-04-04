@@ -1,0 +1,39 @@
+# Reverse proxy configuration for CrushIt app
+
+# Local development URLs - using specific port without TLS
+http:// {
+    # Tell the app it's behind a proxy
+    header {
+        # Add headers for proper proxy handling
+        +X-Forwarded-Proto {http.request.scheme}
+        +X-Forwarded-For {http.request.remote}
+        +X-Real-IP {http.request.remote}
+    }
+    
+    # Frontend routing
+    handle_path /* {
+        reverse_proxy frontend:3000
+    }
+
+    # Backend API routing
+    handle_path /api/* {
+        reverse_proxy backend:8000
+        uri strip_prefix /api
+    }
+
+    # Media files routing
+    handle_path /media/* {
+        reverse_proxy backend:8000
+    }
+
+    # Health check
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Log settings
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}

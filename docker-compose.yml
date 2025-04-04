@@ -1,0 +1,94 @@
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: crushit-postgres
+    environment:
+      POSTGRES_USER: crushit
+      POSTGRES_PASSWORD: crushit_password
+      POSTGRES_DB: crushit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crushit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crushit-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://crushit:crushit_password@postgres:5432/crushit
+      - BACKEND_URL=http://localhost:8000
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./media:/app/media
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crushit-frontend
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      - NEXT_PUBLIC_BACKEND_API_URL=/api
+        # These environment variables help Next.js handle proxied requests
+      - NEXT_PUBLIC_VERCEL_URL=localhost
+      - HOSTNAME=0.0.0.0
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: crushit-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: crushit-ngrok
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    command: >
+      http caddy:80
+      --log=stdout
+      --log-format=json
+      --log-level=info
+      --domain=${NGROK_DOMAIN:-}
+      --scheme=https
+    ports:
+      - "4040:4040"  # ngrok web interface
+    depends_on:
+      - caddy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
