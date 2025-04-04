@@ -1,7 +1,7 @@
 import json
 from pydantic_settings import BaseSettings
 from typing import List
-from pydantic import EmailStr, AnyHttpUrl, validator
+from pydantic import EmailStr, AnyHttpUrl, field_validator
 
 
 class Settings(BaseSettings):
@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v):
         if isinstance(v, str):
             try:
