@@ -20,6 +20,7 @@ var/
 .installed.cfg
 *.egg
 .env
+.env.ngrok
 venv/
 .venv/
 
