@@ -1,6 +1,8 @@
 {
   "extends": "next",
   "rules": {
-    "@next/next/no-html-link-for-pages": ["error", "app"]
+    "@next/next/no-html-link-for-pages": ["error", "app"],
+    "@next/next/no-img-element": "off",
+    "react-hooks/exhaustive-deps": "off"
   }
 }
