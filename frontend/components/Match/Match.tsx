@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { FiHeart, FiMapPin, FiStar, FiTag, FiFilter, FiMoreHorizontal } from "react-icons/fi";
 import Slider from "rc-slider";
@@ -65,7 +65,7 @@ enum SortOption {
   TAGS_MATCH = 'tags_match'
 }
 
-const Match = () => {
+const MatchContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1109,6 +1109,31 @@ const Match = () => {
         </div>
       </div>
     </section>
+  );
+};
+
+// Loading component to show while suspense is active
+const LoadingUI = () => {
+  return (
+    <section className="pt-16 md:pt-20 lg:pt-28 bg-[#1E1E1E] min-h-screen">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-center items-center h-60">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-10 w-10 border-4 border-t-transparent border-[#D63384] rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-300 font-medium">Yükleniyor...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Main component that wraps with Suspense
+const Match = () => {
+  return (
+    <Suspense fallback={<LoadingUI />}>
+      <MatchContent />
+    </Suspense>
   );
 };
 

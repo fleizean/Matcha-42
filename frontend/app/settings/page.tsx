@@ -573,7 +573,7 @@ const SettingsPage = () => {
     }
 
     // Only allow letters, numbers and dashes
-    if (!/^[a-z0-9-]+$/.test(normalizedTag)) {
+    if (!/^[a-zçğüöış0-9-]+$/.test(normalizedTag)) {
       toast.error('Etiket sadece harf, rakam ve tire içerebilir');
       return false;
     }
