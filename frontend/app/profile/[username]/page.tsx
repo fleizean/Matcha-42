@@ -136,7 +136,7 @@ const ProfilePage = () => {
   const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/${params.username}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/${params.username}`,
         {
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -170,8 +170,8 @@ const ProfilePage = () => {
 
     try {
       const endpoint = isLiked
-        ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/like/${profile.id}`
-        : `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/like`;
+        ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/like/${profile.id}`
+        : `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/like`;
 
       const response = await fetch(endpoint, {
         method: isLiked ? 'DELETE' : 'POST',
@@ -237,7 +237,7 @@ const ProfilePage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/block`,
         {
           method: 'POST',
           headers: {
@@ -284,7 +284,7 @@ const ProfilePage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block/${profile.id}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/block/${profile.id}`,
         {
           method: 'DELETE',
           headers: {
@@ -323,7 +323,7 @@ const ProfilePage = () => {
         fetchProfile(),
         // Block durumunu kontrol et
         fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked/${profile.username}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/is-blocked/${profile.username}`,
           {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,
@@ -397,7 +397,7 @@ const ProfilePage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/report`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/report`,
         {
           method: 'POST',
           headers: {
@@ -432,7 +432,7 @@ const ProfilePage = () => {
     setIsLoadingLikers(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/likes?limit=5`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/likes?limit=5`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -459,7 +459,7 @@ const ProfilePage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -489,7 +489,7 @@ const ProfilePage = () => {
     setIsLoadingVisitors(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/visits?username=${currentUsername}&limit=5`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/visits?username=${currentUsername}&limit=5`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -517,7 +517,7 @@ const ProfilePage = () => {
     setIsLoadingMatches(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/matches?limit=5`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/matches?limit=5`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -568,7 +568,7 @@ const ProfilePage = () => {
       if (session?.user?.accessToken && params.username !== 'me') {
         try {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`,
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me`,
             {
               headers: {
                 'Authorization': `Bearer ${session.user.accessToken}`,
@@ -656,7 +656,7 @@ const ProfilePage = () => {
 
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked?blocked_username=${params.username}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/is-blocked?blocked_username=${params.username}`,
           {
             method: 'POST',
             headers: {
@@ -683,7 +683,7 @@ const ProfilePage = () => {
       try {
         // `/me/is-liked/{username}` endpoint'ini kullanarak beğeni durumunu kontrol edelim
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/is-liked/${profile.username}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/is-liked/${profile.username}`,
           {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,

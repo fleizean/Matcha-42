@@ -153,7 +153,7 @@ const ChatPage = () => {
 
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me`,
           {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,
@@ -310,7 +310,7 @@ const ChatPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/conversations`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/conversations`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -415,7 +415,7 @@ const ChatPage = () => {
     try {
       // First get the username for block check
       const userResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/get-by-user_id/${userId}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -446,7 +446,7 @@ const ChatPage = () => {
 
       // If not blocked, proceed with message fetch
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/messages/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/messages/${userId}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -489,7 +489,7 @@ const ChatPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/is-blocked?blocked_username=${username}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/is-blocked?blocked_username=${username}`,
         {
           method: 'POST',
           headers: {
@@ -555,7 +555,7 @@ const ChatPage = () => {
 
       // WebSocket bağlı değilse REST API'yi kullan
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/messages`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/messages`,
         {
           method: 'POST',
           headers: {
@@ -754,7 +754,7 @@ const ChatPage = () => {
 
       // Önce user_id ile profil bilgilerini al
       const profileResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${activeChat}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/get-by-user_id/${activeChat}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -775,7 +775,7 @@ const ChatPage = () => {
 
       // Şimdi profile_id ile engelleme işlemi yap
       const blockResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/block`,
         {
           method: 'POST',
           headers: {
@@ -824,7 +824,7 @@ const ChatPage = () => {
       try {
         // First get the username from user ID
         const userResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${userIdFromUrl}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/get-by-user_id/${userIdFromUrl}`,
           {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,
@@ -871,7 +871,7 @@ const ChatPage = () => {
 
       // Önce user_id ile profil bilgilerini al
       const profileResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-by-user_id/${activeChat}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/get-by-user_id/${activeChat}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -892,7 +892,7 @@ const ChatPage = () => {
 
       // Şimdi profile_id ile şikayet işlemi yap
       const reportResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/report`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/report`,
         {
           method: 'POST',
           headers: {
@@ -992,7 +992,7 @@ const ChatPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/get-for-chat/${username}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/get-for-chat/${username}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,

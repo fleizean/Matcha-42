@@ -66,7 +66,7 @@ const SignupPage = () => {
     }
   
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/register`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         credentials: 'include',

@@ -7,7 +7,7 @@ from pydantic import EmailStr, AnyHttpUrl, field_validator
 class Settings(BaseSettings):
     # Application settings
     PROJECT_NAME: str = "CrushIt"
-    API_V1_STR: str = "/api"
+    API_V1_STR: str = "/bapi"
     
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -24,6 +24,7 @@ class Settings(BaseSettings):
         return v
 
     BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str
 
     # Database settings
     DATABASE_URL: str
@@ -47,7 +48,6 @@ class Settings(BaseSettings):
     OAUTH_42_CLIENT_SECRET: str
     
 
-    FRONTEND_URL: str
     MEDIA_ROOT: str = "./media"
     
     class Config:

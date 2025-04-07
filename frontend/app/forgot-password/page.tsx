@@ -30,7 +30,7 @@ const ForgotPasswordPage = () => {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/forgot-password?email=${mail}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/forgot-password?email=${mail}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

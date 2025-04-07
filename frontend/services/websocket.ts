@@ -33,7 +33,7 @@ class WebSocketService {
   // Set the active conversation ID
   public setActiveConversation(userId: string | null): void {
     this.activeConversationId = userId;
-    console.log(`Active conversation set to: ${userId}`);
+    //console.log(`Active conversation set to: ${userId}`);
   }
 
   // Get the active conversation ID
@@ -70,7 +70,7 @@ class WebSocketService {
       const url = new URL(apiUrl);
       
       // Construct WebSocket URL
-      const wsUrl = `${wsProtocol}//${url.host}/api/realtime/ws/${token}`;
+      const wsUrl = `${wsProtocol}//${url.host}/bapi/realtime/ws/${token}`;
       
       console.log(`Connecting to WebSocket at ${wsUrl}`);
       
@@ -174,7 +174,7 @@ class WebSocketService {
   }
 
   private handleOpen(): void {
-    console.log('WebSocket connected successfully');
+    console.log('WebSocket opened successfully');
     this.initializing = false;
     this.reconnectAttempts = 0;
     

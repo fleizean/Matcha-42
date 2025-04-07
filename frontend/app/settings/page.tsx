@@ -168,7 +168,7 @@ const SettingsPage = () => {
     try {
       // Get user's OAuth connections
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me/oauth`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me/oauth`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -195,7 +195,7 @@ const SettingsPage = () => {
     setIsLoadingBlocked(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/blocks?limit=10`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/blocks?limit=10`,
         {
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -221,7 +221,7 @@ const SettingsPage = () => {
   const handleUnblock = async (userId: string) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/block/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/block/${userId}`,
         {
           method: 'DELETE',
           headers: {
@@ -279,13 +279,13 @@ const SettingsPage = () => {
   const fetchProfile = useCallback(async () => {
     try {
       const [profileResponse, userResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me`, {
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
             'Content-Type': 'application/json',
           }
         }),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
             'Content-Type': 'application/json',
@@ -432,7 +432,7 @@ const SettingsPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/delete-oauth-account`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/delete-oauth-account`,
         {
           method: 'PUT',
           headers: {
@@ -474,7 +474,7 @@ const SettingsPage = () => {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/change-password`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -510,7 +510,7 @@ const SettingsPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/delete-account`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/delete-account`,
         {
           method: 'PUT',
           headers: {
@@ -601,7 +601,7 @@ const SettingsPage = () => {
           name: tagName
         };
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/tags`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/tags`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -641,7 +641,7 @@ const SettingsPage = () => {
     try {
       const updatedTags = tags.filter(tag => tag.name !== tagName);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/tags`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/tags`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -679,7 +679,7 @@ const SettingsPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/pictures/${pictureId}/primary`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/pictures/${pictureId}/primary`,
         {
           method: 'PUT',
           headers: {
@@ -713,7 +713,7 @@ const SettingsPage = () => {
       setIsLoading(true);
 
       const updateLocationViaAPI = async (latitude: number, longitude: number) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/location`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/location`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -812,7 +812,7 @@ const SettingsPage = () => {
       formData.append('file', file);
       formData.append('is_primary', (!profileInfo.photos.length).toString()); // First photo is primary
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/pictures`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/pictures`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -846,7 +846,7 @@ const SettingsPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/pictures/${pictureId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/pictures/${pictureId}`,
         {
           method: 'DELETE',
           headers: {
@@ -876,7 +876,7 @@ const SettingsPage = () => {
     const handleProfileUpdate = async () => {
       try {
         // Update user data first
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -925,7 +925,7 @@ const SettingsPage = () => {
         }
   
         // Then update profile data
-        const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
+        const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -974,7 +974,7 @@ const SettingsPage = () => {
   const handleManualLocationSelect = async () => {
     if (!selectedPosition) return;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/location`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/location`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${session?.user?.accessToken}`,

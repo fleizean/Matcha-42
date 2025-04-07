@@ -37,7 +37,7 @@ function VerifyContent() {
       try {
         // Updated path to match backend route
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/verify?token=${token}`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/verify?token=${token}`,
           {
             method: 'GET',
             headers: {

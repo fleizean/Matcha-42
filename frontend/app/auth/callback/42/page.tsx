@@ -39,7 +39,7 @@ function OAuthCallbackHandler() {
         
         // Exchange code for tokens via backend
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/oauth/42/callback`,
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/oauth/42/callback`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

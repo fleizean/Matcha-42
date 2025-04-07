@@ -326,7 +326,7 @@ const MatchContent = () => {
       // This endpoint would return the liked status for multiple profiles in one request
       // You might need to implement this endpoint on your backend
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/liked-status`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/liked-status`,
         {
           method: 'POST',
           headers: {
@@ -375,7 +375,7 @@ const MatchContent = () => {
 
         try {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me/is-liked/${username}`,
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/is-liked/${username}`,
             {
               headers: {
                 'Authorization': `Bearer ${session.user.accessToken}`,
@@ -434,7 +434,7 @@ const MatchContent = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -513,7 +513,7 @@ const MatchContent = () => {
       }
   
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/suggested?${queryParams}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/suggested?${queryParams}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -670,7 +670,7 @@ const MatchContent = () => {
 
     try {
       const isLiked = likedProfiles.has(profileId);
-      const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/interactions/like${isLiked ? `/${profileId}` : ''}`;
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/interactions/like${isLiked ? `/${profileId}` : ''}`;
 
       const response = await fetch(url, {
         method: isLiked ? 'DELETE' : 'POST',

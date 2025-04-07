@@ -13,7 +13,7 @@ const OAuthButtons = ({ onStart }: OAuthButtonsProps) => {
       
       // Request authorization URL from backend
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/oauth/42`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/oauth/42`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },

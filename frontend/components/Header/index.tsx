@@ -71,7 +71,7 @@ const Header = () => {
     const fetchUserData = async () => {
       if (session?.user?.accessToken) {
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/me`, {
             headers: {
               'Authorization': `Bearer ${session.user.accessToken}`,
             }
@@ -110,7 +110,7 @@ const Header = () => {
     try {
       setIsLoadingNotifications(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications?limit=10&offset=${notificationsPage * 10}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/notifications?limit=10&offset=${notificationsPage * 10}`,
         {
           headers: {
             'Authorization': `Bearer ${session.user.accessToken}`,
@@ -176,7 +176,7 @@ const Header = () => {
       const nextPage = notificationsPage + 1;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications?limit=10&offset=${nextPage * 10}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/notifications?limit=10&offset=${nextPage * 10}`,
         {
           headers: {
             'Authorization': `Bearer ${session?.user?.accessToken}`,
@@ -241,7 +241,7 @@ const Header = () => {
     if (!session?.user?.accessToken) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications/count`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/notifications/count`, {
         headers: {
           'Authorization': `Bearer ${session.user.accessToken}`,
         }
@@ -262,7 +262,7 @@ const Header = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications/${notificationId}/read`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/notifications/${notificationId}/read`,
         {
           method: 'POST',
           headers: {
@@ -288,7 +288,7 @@ const Header = () => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/realtime/notifications/read-all`,
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/realtime/notifications/read-all`,
         {
           method: 'POST',
           headers: {
@@ -800,7 +800,7 @@ const getNotificationIcon = (type: string) => {
                               try {
                                 // Backend API'ye logout isteği gönder
                                 if (session?.user?.accessToken) {
-                                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/logout`, {
+                                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/logout`, {
                                     method: 'POST',
                                     headers: {
                                       'Authorization': `Bearer ${session.user.accessToken}`,
@@ -902,7 +902,7 @@ const getNotificationIcon = (type: string) => {
                               try {
                                 // Backend API'ye logout isteği gönder
                                 if (session?.user?.accessToken) {
-                                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/logout`, {
+                                  await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/logout`, {
                                     method: 'POST',
                                     headers: {
                                       'Authorization': `Bearer ${session.user.accessToken}`,
