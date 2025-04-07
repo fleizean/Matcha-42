@@ -39,7 +39,7 @@ const SigninPage = () => {
       meta.content = metadata.description as string;
       document.head.appendChild(meta);
     }
-  }, [metadata]);
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { IoIosSettings } from "react-icons/io";
 import ThemeToggler from "./ThemeToggler";
@@ -237,7 +237,7 @@ const Header = () => {
   };
 
   // Function to fetch unread notification count
-  const fetchNotificationCount = async () => {
+  const fetchNotificationCount = useCallback(async () => {
     if (!session?.user?.accessToken) return;
 
     try {
@@ -254,7 +254,7 @@ const Header = () => {
     } catch (error) {
       console.error('Failed to fetch notification count:', error);
     }
-  };
+  }, [session]);
 
   // Mark notification as read
   const markNotificationAsRead = async (notificationId: number) => {
@@ -524,7 +524,7 @@ const getNotificationIcon = (type: string) => {
       const intervalId = setInterval(fetchNotificationCount, 30000);
       return () => clearInterval(intervalId);
     }
-  }, [session]);
+  }, [session, fetchNotificationCount]);
 
   // Add notification bell to mobile menu
   const toggleMobileNotifications = () => {

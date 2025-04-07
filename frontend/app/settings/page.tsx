@@ -191,7 +191,7 @@ const SettingsPage = () => {
   };
 
   // Add fetch function
-  const fetchBlockedUsers = async () => {
+  const fetchBlockedUsers = useCallback(async () => {
     setIsLoadingBlocked(true);
     try {
       const response = await fetch(
@@ -215,7 +215,7 @@ const SettingsPage = () => {
     } finally {
       setIsLoadingBlocked(false);
     }
-  };
+  }, [session]);
 
   // Update handleUnblock function
   const handleUnblock = async (userId: string) => {
@@ -247,7 +247,98 @@ const SettingsPage = () => {
     if (activeTab === "blocked" && session?.user?.accessToken) {
       fetchBlockedUsers();
     }
-  }, [activeTab, session]);
+  }, [activeTab, session, fetchBlockedUsers]);
+
+    // Add this function after other imports
+    const getCityCountryFromCoords = useCallback(async (latitude: number | null, longitude: number | null): Promise<string> => {
+      // Return early if coordinates are null/undefined
+      if (!latitude || !longitude) {
+        return 'Konum bilgisi yok';
+      }
+  
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
+        );
+  
+        if (!response.ok) {
+          throw new Error('Geocoding failed');
+        }
+  
+        const data = await response.json();
+        const city = data.address?.province || data.address?.city || '';
+        const country = data.address?.country || '';
+  
+        return city && country ? `${city}, ${country}` : 'Konum bilgisi bulunamadı';
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        return 'Konum bilgisi alınamadı';
+      }
+    }, []);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const [profileResponse, userResponse] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
+          headers: {
+            'Authorization': `Bearer ${session?.user?.accessToken}`,
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${session?.user?.accessToken}`,
+            'Content-Type': 'application/json',
+          }
+        })
+      ]);
+
+      if (!profileResponse.ok || !userResponse.ok) {
+        throw new Error('Data fetch failed');
+      }
+
+      const [profileData, userData]: [ProfileApiResponse, UserApiResponse] = await Promise.all([
+        profileResponse.json(),
+        userResponse.json()
+      ]);
+
+      // Update profile info state with both API responses
+      setProfileInfo(prevState => ({
+        ...prevState,
+        firstName: userData.first_name || "",
+        lastName: userData.last_name || "",
+        username: userData.username || "",
+        email: userData.email || "",
+        gender: profileData.gender || "",
+        preference: profileData.sexual_preference || "",
+        biography: profileData.biography || "",
+        latitude: profileData.latitude || 0,
+        longitude: profileData.longitude || 0,
+        photos: profileData.pictures || [], // Changed from photos to pictures
+        tag: profileData.tags.join(", "),
+        birthDate: profileData.birth_date ? new Date(profileData.birth_date).toISOString().split('T')[0] : "",
+      }));
+
+      setTags(profileData.tags);
+      const locationString = profileData.latitude && profileData.longitude ?
+        await getCityCountryFromCoords(profileData.latitude, profileData.longitude) :
+        'Konum bilgisi yok';
+
+      // Update profileInfo with both coordinates and location string
+      setProfileInfo(prev => ({
+        ...prev,
+        latitude: profileData.latitude || 0,
+        longitude: profileData.longitude || 0,
+        location: locationString
+      }));
+
+    } catch (error) {
+      toast.error('Profil bilgileri yüklenemedi');
+      console.error('Profile fetch error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, getCityCountryFromCoords]);
 
 
   // Effects
@@ -267,7 +358,7 @@ const SettingsPage = () => {
       
       checkOAuthStatus();
     }
-  }, [session]);
+  }, [session, fetchProfile]);
 
   // Modified account deletion modal for OAuth users
   const renderDeleteAccountModal = () => {
@@ -458,69 +549,7 @@ const SettingsPage = () => {
     setDeletePassword(e.target.value);
   };
 
-  const fetchProfile = async () => {
-    try {
-      const [profileResponse, userResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/me`, {
-          headers: {
-            'Authorization': `Bearer ${session?.user?.accessToken}`,
-            'Content-Type': 'application/json',
-          }
-        }),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/users/me`, {
-          headers: {
-            'Authorization': `Bearer ${session?.user?.accessToken}`,
-            'Content-Type': 'application/json',
-          }
-        })
-      ]);
 
-      if (!profileResponse.ok || !userResponse.ok) {
-        throw new Error('Data fetch failed');
-      }
-
-      const [profileData, userData]: [ProfileApiResponse, UserApiResponse] = await Promise.all([
-        profileResponse.json(),
-        userResponse.json()
-      ]);
-
-      // Update profile info state with both API responses
-      setProfileInfo(prevState => ({
-        ...prevState,
-        firstName: userData.first_name || "",
-        lastName: userData.last_name || "",
-        username: userData.username || "",
-        email: userData.email || "",
-        gender: profileData.gender || "",
-        preference: profileData.sexual_preference || "",
-        biography: profileData.biography || "",
-        latitude: profileData.latitude || 0,
-        longitude: profileData.longitude || 0,
-        photos: profileData.pictures || [], // Changed from photos to pictures
-        tag: profileData.tags.join(", "),
-        birthDate: profileData.birth_date ? new Date(profileData.birth_date).toISOString().split('T')[0] : "",
-      }));
-
-      setTags(profileData.tags);
-      const locationString = profileData.latitude && profileData.longitude ?
-        await getCityCountryFromCoords(profileData.latitude, profileData.longitude) :
-        'Konum bilgisi yok';
-
-      // Update profileInfo with both coordinates and location string
-      setProfileInfo(prev => ({
-        ...prev,
-        latitude: profileData.latitude || 0,
-        longitude: profileData.longitude || 0,
-        location: locationString
-      }));
-
-    } catch (error) {
-      toast.error('Profil bilgileri yüklenemedi');
-      console.error('Profile fetch error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const isValidTag = (tag: string): boolean => {
     const normalizedTag = tag.toLowerCase().trim();
@@ -643,32 +672,7 @@ const SettingsPage = () => {
     }
   };
 
-  // Add this function after other imports
-  const getCityCountryFromCoords = async (latitude: number | null, longitude: number | null): Promise<string> => {
-    // Return early if coordinates are null/undefined
-    if (!latitude || !longitude) {
-      return 'Konum bilgisi yok';
-    }
 
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
-      );
-
-      if (!response.ok) {
-        throw new Error('Geocoding failed');
-      }
-
-      const data = await response.json();
-      const city = data.address?.province || data.address?.city || '';
-      const country = data.address?.country || '';
-
-      return city && country ? `${city}, ${country}` : 'Konum bilgisi bulunamadı';
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      return 'Konum bilgisi alınamadı';
-    }
-  };
 
   const handleSetPrimaryPhoto = async (pictureId: string) => {
     setIsLoading(true);

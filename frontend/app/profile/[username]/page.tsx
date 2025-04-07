@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { FiHeart, FiMessageSquare, FiMapPin, FiClock, FiStar, FiSlash, FiFlag, FiEdit, FiMoreHorizontal, FiLoader } from "react-icons/fi";
 import Slider from "react-slick";
@@ -133,7 +133,7 @@ const ProfilePage = () => {
   }
     , []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/profiles/${params.username}`,
@@ -156,14 +156,14 @@ const ProfilePage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session, params.username]);
 
   // Move the original useEffect below the function definition
   useEffect(() => {
     if (session?.user?.accessToken) {
       fetchProfile();
     }
-  }, [session, params.username]);
+  }, [session, params.username, fetchProfile]);
 
   const handleLike = async () => {
     if (!session?.user?.accessToken || !profile) return;
@@ -426,7 +426,7 @@ const ProfilePage = () => {
     }
   };
 
-  const fetchRecentLikers = async () => {
+  const fetchRecentLikers = useCallback(async () => {
     if (!session?.user?.accessToken) return;
 
     setIsLoadingLikers(true);
@@ -452,9 +452,9 @@ const ProfilePage = () => {
     } finally {
       setIsLoadingLikers(false);
     }
-  };
+  }, [session]);
 
-  const fetchCurrentUsername = async () => {
+  const fetchCurrentUsername = useCallback(async () => {
     if (!session?.user?.accessToken) return;
 
     try {
@@ -474,16 +474,16 @@ const ProfilePage = () => {
     } catch (error) {
       console.error('Failed to fetch current user info:', error);
     }
-  };
+  }, [session]);
 
   useEffect(() => {
     if (session?.user?.accessToken) {
       fetchCurrentUsername();
     }
-  }, [session]);
+  }, [session, fetchCurrentUsername]);
 
 
-  const fetchRecentVisitors = async () => {
+  const fetchRecentVisitors = useCallback(async () => {
     if (!session?.user?.accessToken || !currentUsername || profile?.username !== currentUsername) return;
 
     setIsLoadingVisitors(true);
@@ -509,9 +509,9 @@ const ProfilePage = () => {
     } finally {
       setIsLoadingVisitors(false);
     }
-  };
+  }, [session, currentUsername, profile]);
 
-  const fetchRecentMatches = async () => {
+  const fetchRecentMatches = useCallback(async () => {
     if (!session?.user?.accessToken || !currentUsername || profile?.username !== currentUsername) return;
 
     setIsLoadingMatches(true);
@@ -537,7 +537,7 @@ const ProfilePage = () => {
     } finally {
       setIsLoadingMatches(false);
     }
-  };
+  }, [currentUsername, profile?.username, session.user.accessToken]);
 
   // 4. useEffect'i güncelleyelim
   useEffect(() => {
@@ -549,7 +549,7 @@ const ProfilePage = () => {
         fetchRecentMatches();
       }
     }
-  }, [profile, session, currentUsername]);
+  }, [profile, session, currentUsername, fetchRecentLikers, fetchRecentVisitors, fetchRecentMatches]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in kilometers

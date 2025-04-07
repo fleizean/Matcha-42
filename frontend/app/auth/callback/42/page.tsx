@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-export default function OAuth42CallbackPage() {
+// This component will use the searchParams
+function OAuthCallbackHandler() {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -136,5 +137,26 @@ export default function OAuth42CallbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function CallbackLoading() {
+  return (
+    <div className="min-h-screen bg-[#1C1C1E] flex items-center justify-center">
+      <div className="text-center">
+        <LoadingSpinner />
+        <p className="text-gray-300 mt-4">Yükleniyor...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function OAuth42CallbackPage() {
+  return (
+    <Suspense fallback={<CallbackLoading />}>
+      <OAuthCallbackHandler />
+    </Suspense>
   );
 }

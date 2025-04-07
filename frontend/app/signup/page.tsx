@@ -45,7 +45,7 @@ const SignupPage = () => {
       meta.content = metadata.description as string;
       document.head.appendChild(meta);
     }
-  }, [metadata]);
+  }, []);
 
     const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

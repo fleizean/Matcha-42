@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaGithub, FaGraduationCap, FaInstagram, FaSquareXTwitter } from "react-icons/fa6";
 import { Metadata } from 'next'
-
+import Image from 'next/image'
 
 
 const metadata: Metadata = {
@@ -154,7 +154,7 @@ const AboutPage = () => {
                 Ekibimiz
               </h2>
               <p className="text-gray-300">
-                CrushIt'i sizin için daha iyi hale getirmek için çalışan harika bir ekip.
+                CrushIt&apos;i sizin için daha iyi hale getirmek için çalışan harika bir ekip.
               </p>
             </motion.div>
 
@@ -167,7 +167,7 @@ const AboutPage = () => {
                 className="bg-[#3A3A3C] rounded-xl overflow-hidden shadow-lg"
               >
                 <div className="h-64 overflow-hidden" onClick={() => setSelectedImage("/images/team/member1.jpeg")}>
-                  <img
+                  <Image
                     src="/images/team/member1.jpeg"
                     alt="Team Member"
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
@@ -201,7 +201,7 @@ const AboutPage = () => {
                 className="bg-[#3A3A3C] rounded-xl overflow-hidden shadow-lg"
               >
                 <div className="h-64 overflow-hidden" onClick={() => setSelectedImage("/images/team/member2.jpeg")}>
-                  <img
+                  <Image
                     src="/images/team/member2.jpeg"
                     alt="Team Member"
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
@@ -244,7 +244,7 @@ const AboutPage = () => {
                       className="relative max-w-4xl max-h-[90vh]"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <img
+                      <Image
                         src={selectedImage}
                         alt="Full size"
                         className="max-w-full max-h-[90vh] object-contain"

@@ -78,7 +78,7 @@ export default function LeafletMap({
       }
     };
   // initialLocation'ı dependency array'den çıkarın, sadece ilk render'da kullanılmasını sağlayın
-  }, [mapId, onLocationSelect]); 
+  }, [mapId, onLocationSelect, selectedLocation]); 
   
   return (
     <>
