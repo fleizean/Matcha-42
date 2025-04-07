@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import SectionTitle from "../Common/SectionTitle";
 import { useState } from "react";
-import Image from "next/image";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 
 const successStories = [
@@ -64,7 +63,7 @@ const SuccessStories = () => {
             <div className="bg-gradient-to-r from-[#8A2BE2]/10 to-[#D63384]/10 rounded-xl shadow-lg p-8 backdrop-blur-sm">
               <div className="text-center mb-8">
                 <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-[#D63384]">
-                  <Image
+                  <img
                     src={successStories[currentIndex].image}
                     alt={successStories[currentIndex].name}
                     className="w-full h-full object-cover"

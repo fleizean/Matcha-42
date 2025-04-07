@@ -537,7 +537,7 @@ const ProfilePage = () => {
     } finally {
       setIsLoadingMatches(false);
     }
-  }, [currentUsername, profile?.username, session.user.accessToken]);
+  }, [currentUsername, profile?.username]);
 
   // 4. useEffect'i güncelleyelim
   useEffect(() => {
