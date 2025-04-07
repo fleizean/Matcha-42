@@ -764,9 +764,27 @@ const MatchContent = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap">
           {/* Filter Sidebar - Fixed position on scroll */}
-          <div className="w-full lg:w-1/4 mb-8 lg:mb-0">
+            <div className="w-full lg:w-1/4 mb-8 lg:mb-0">
             <div className="lg:sticky lg:top-24 bg-[#2C2C2E] rounded-xl p-6 max-h-[calc(100vh-120px)] overflow-y-auto">
-              <h3 className="text-xl font-semibold text-white mb-6">Filtreler</h3>
+              <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">Filtreler</h3>
+              <button
+                onClick={() => {
+                setFilters({
+                  min_age: DEFAULT_MIN_AGE,
+                  max_age: DEFAULT_MAX_AGE,
+                  min_fame: DEFAULT_MIN_FAME,
+                  max_fame: DEFAULT_MAX_FAME,
+                  max_distance: DEFAULT_MAX_DISTANCE,
+                  tags: []
+                });
+                toast.success('Tüm etiketler temizlendi');
+                }}
+                className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
+              >
+                Hepsini Temizle
+              </button>
+              </div>
 
               <div className="mb-6">
                 <label className="text-gray-300 mb-2 block">Yaş Aralığı</label>
