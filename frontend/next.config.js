@@ -2,13 +2,6 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      'localhost',
-      '127.0.0.1',
-      process.env.NEXT_PUBLIC_BACKEND_API_URL || 'localhost',
-      'image_url.domain.com',
-      process.env.NEXT_PUBLIC_BACKEND_API_URL || 'backend',
-    ],
-    remotePatterns: [
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -36,10 +29,11 @@ const nextConfig = {
         hostname: 'backend',
         port: '8000',
         pathname: '/media/**',
-      }
+      },
     ]
   },
   reactStrictMode: true,
+  output: 'standalone',
 }
 
 module.exports = nextConfig

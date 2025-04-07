@@ -23,7 +23,7 @@ class Settings(BaseSettings):
                 return [url.strip() for url in v.split(",")]
         return v
 
-    BACKEND_URL: str = "http://localhost:8000"
+    BACKEND_URL: str
     FRONTEND_URL: str
 
     # Database settings

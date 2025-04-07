@@ -1,0 +1,56 @@
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: crushit-postgres
+    environment:
+      POSTGRES_USER: crushit
+      POSTGRES_PASSWORD: crushit_password
+      POSTGRES_DB: crushit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crushit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crushit-backend
+    env_file:
+      - backend/.env
+    volumes:
+      - backend_media:/app/media
+      - ./backend/migrations:/app/migrations
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crushit-frontend
+    env_file:
+      - frontend/.env.local
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_media:
