@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/matcha")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://crushit:crushit_password@postgres:5432/crushit")
 MEDIA_ROOT = os.getenv("MEDIA_ROOT", "./media")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 FACES_DIR = "downloaded_faces"  # Directory containing the downloaded face images
