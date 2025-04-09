@@ -10,7 +10,7 @@ interface RefreshTokenResponse {
 async function refreshToken(refreshToken: string): Promise<RefreshTokenResponse | null> {
   try {
     // Call the backend API to refresh the token
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/refresh`, {
+    const response = await fetch(`${process.env.BACKEND_API_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ export default withAuth(
         try {
           // Check if profile exists
           const profileCheckResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/check-real-profile/${username}`,
+            `${process.env.BACKEND_API_URL}/profiles/check-real-profile/${username}`,
             {
               headers: {
                 Authorization: `Bearer ${token.accessToken}`,

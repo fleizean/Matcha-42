@@ -7,7 +7,7 @@ from pydantic import EmailStr, AnyHttpUrl, field_validator
 class Settings(BaseSettings):
     # Application settings
     PROJECT_NAME: str = "CrushIt"
-    API_V1_STR: str = "/bapi"
+    API_V1_STR: str = "/api"
     
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []

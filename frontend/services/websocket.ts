@@ -70,7 +70,7 @@ class WebSocketService {
       const url = new URL(apiUrl);
       
       // Construct WebSocket URL
-      const wsUrl = `${wsProtocol}//${url.host}/bapi/realtime/ws/${token}`;
+      const wsUrl = `${wsProtocol}//${url.host}/api/realtime/ws/${token}`;
       
       console.log(`Connecting to WebSocket at ${wsUrl}`);
       
