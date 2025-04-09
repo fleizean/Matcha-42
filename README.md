@@ -7,7 +7,7 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 - Frontend: Next.js
 - Backend: FastApi
 - Database: PostgreSQL
-- Real-time: Socket.io
+- Real-time: Websocket
 - Authentication: JWT
 
 ## Prerequisites
@@ -29,7 +29,7 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 
 <div class="checklist-container">
 
-- [ ] No errors, warnings, or notices (server-side & client-side) 🤔
+- [x] No errors, warnings, or notices (server-side & client-side) 🤔
 - [x] Use any programming language and micro-framework of choice 🤔
 - [x] Use a relational or graph-oriented database (MySQL, PostgreSQL, Neo4j, etc.)
 - [x] Ensure database contains at least 500 distinct profiles

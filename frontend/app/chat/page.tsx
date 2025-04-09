@@ -9,7 +9,6 @@ import { useParams, useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
 import { Metadata } from "next";
 import WebSocketService from "@/services/websocket";
-import { a } from "framer-motion/dist/types.d-6pKw1mTI";
 
 const metadata: Metadata = {
   title: "Mesajlar | CrushIt",
@@ -198,7 +197,6 @@ const ChatPage = () => {
     // Define handlers
     // WebSocket mesaj işleyiciyi güncelleyin
     const handleWsMessage = (data: any) => {
-      console.log("WebSocket message received:", data);
 
       if (data.type === 'message') {
         // Gelen mesaj mevcut aktif sohbeti ilgilendiriyor mu kontrol et
@@ -1103,8 +1101,8 @@ const ChatPage = () => {
                           alt={conv.user.first_name}
                           fill
                           className="object-cover"
-                          loading="eager"
                           priority
+                          unoptimized
                         />
                       </div>
                       {conv.user.is_online && (
@@ -1286,8 +1284,8 @@ const ChatPage = () => {
                             alt="Active chat"
                             fill
                             className="object-cover"
-                            loading="eager" // Öncelikli yükleme
                             priority
+                            unoptimized
                           />
                         </div>
                         {activeChatUser?.isOnline && (
@@ -1384,8 +1382,8 @@ const ChatPage = () => {
                                       width={32}
                                       height={32}
                                       className="object-cover"
-                                      loading="eager" // Öncelikli yükleme
                                       priority
+                                      unoptimized
                                     />
                                   </div>
                                 )}
