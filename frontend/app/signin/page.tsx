@@ -102,7 +102,7 @@ const SigninPage = () => {
                 <div className="mb-8 flex items-center justify-center">
                   <span className="hidden h-[1px] w-full max-w-[70px] bg-gray-600 sm:block"></span>
                   <p className="w-full px-5 text-center text-base font-medium text-gray-400">
-                    Kullanıcı adınız ve Şifrenizle Giriş Yapın
+                    Veya Kullanıcı adınız ve Şifrenizle Giriş Yapın
                   </p>
                   <span className="hidden h-[1px] w-full max-w-[70px] bg-gray-600 sm:block"></span>
                 </div>

@@ -43,7 +43,7 @@ const OAuthButtons = ({ onStart }: OAuthButtonsProps) => {
       <div className="mb-4 flex items-center justify-center">
         <span className="hidden h-[1px] w-full max-w-[60px] bg-gray-600 sm:block"></span>
         <p className="w-full px-5 text-center text-base font-medium text-gray-400">
-          veya hesabınızla giriş yapın
+          42 hesabınızla giriş yapın
         </p>
         <span className="hidden h-[1px] w-full max-w-[60px] bg-gray-600 sm:block"></span>
       </div>
