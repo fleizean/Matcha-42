@@ -1142,7 +1142,13 @@ const SettingsPage = () => {
                           onChange={(e) => setProfileInfo({ ...profileInfo, email: e.target.value })}
                           placeholder="E-posta adresiniz"
                           className="w-full bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                          disabled={isOAuth}
                         />
+                        {isOAuth && (
+                          <p className="text-sm text-gray-400 mt-2">
+                            42 hesabıyla giriş yaptığınız için e-posta adresinizi değiştiremezsiniz.
+                          </p>
+                        )}
                       </div>
                     </div>
 
