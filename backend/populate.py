@@ -251,7 +251,7 @@ async def create_users_batch(
                 ) VALUES ($1, $2, $3, $4)
                 """,
                     profile_id,
-                    relative_path,
+                    f"media/{relative_path}",
                     f"{BACKEND_URL}/media/{relative_path.replace(os.sep, '/')}",
                     True  # is_primary
                 )
