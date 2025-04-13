@@ -72,7 +72,8 @@ logs
 *.log
 
 # Media files (will be mounted as volume)
-media
+media/
+downloaded_faces/
 
 # Test files
 .coverage

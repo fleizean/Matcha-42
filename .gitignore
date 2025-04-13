@@ -5,6 +5,11 @@
 .env.test.local
 .env.production
 
+# Certificates
+*.crt
+*.pem
+*.key
+
 # Node dependencies
 node_modules/
 # pictures

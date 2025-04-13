@@ -65,20 +65,36 @@ class WebSocketService {
     this.url = apiUrl;
 
     try {
-      // Use a secure connection if the page is served over HTTPS
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const url = new URL(apiUrl);
-      
-      // Construct WebSocket URL
-      const wsUrl = `${wsProtocol}//${url.host}/api/realtime/ws/${token}`;
-      
-      console.log(`Connecting to WebSocket at ${wsUrl}`);
-      
-      // Clean up any existing connection
-      this.cleanupConnection();
-      
-      // Create new WebSocket connection
-      this.ws = new WebSocket(wsUrl);
+      // Check if we have a WS URL in environment variables
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL 
+        ? `${process.env.NEXT_PUBLIC_WS_URL}/${token}` 
+        : null;
+        
+      // If we have a predefined WS URL, use it
+      if (wsUrl) {
+        console.log(`Connecting to WebSocket at ${wsUrl}`);
+        
+        // Clean up any existing connection
+        this.cleanupConnection();
+        
+        // Create new WebSocket connection
+        this.ws = new WebSocket(wsUrl);
+      } else {
+        // Fall back to constructing the URL from API URL
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = new URL(apiUrl);
+        
+        // Construct WebSocket URL
+        const fallbackWsUrl = `${wsProtocol}//${url.host}/backend-api/realtime/ws/${token}`;
+        
+        console.log(`Connecting to WebSocket at ${fallbackWsUrl}`);
+        
+        // Clean up any existing connection
+        this.cleanupConnection();
+        
+        // Create new WebSocket connection
+        this.ws = new WebSocket(fallbackWsUrl);
+      }
       
       this.ws.onopen = this.handleOpen.bind(this);
       this.ws.onmessage = this.handleMessage.bind(this);

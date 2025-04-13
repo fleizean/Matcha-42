@@ -34,6 +34,21 @@ const nextConfig = {
   },
   reactStrictMode: true,
   output: 'standalone',
+  async rewrites() {
+    return [
+      {
+        source: '/media/:path*',
+        destination: process.env.NEXT_PUBLIC_BACKEND_API_URL + '/media/:path*',
+      },
+    ];
+  },
+  webpack: (config, { isServer }) => {
+    // For WebSocket connections to work properly
+    if (!isServer) {
+      config.externals = [...(config.externals || []), "ws"];
+    }
+    return config;
+  },
 }
 
 module.exports = nextConfig

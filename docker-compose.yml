@@ -45,10 +45,22 @@ services:
     container_name: crushit-frontend
     env_file:
       - frontend/.env.local
-    ports:
-      - "3000:3000"
     restart: unless-stopped
     depends_on:
+      - backend
+      
+  nginx:
+    image: nginx:alpine
+    container_name: crushit-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    restart: unless-stopped
+    depends_on:
+      - frontend
       - backend
 
 volumes:
