@@ -173,7 +173,7 @@ const MatchContent = () => {
     setAgeRange([filters.min_age, filters.max_age]);
   }, []);
 
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver | null>(null);
   // Reference for the last profile element to trigger loading more
   const lastProfileRef = useCallback((node: HTMLDivElement) => {
     if (isLoading || isFetchingMore) return;
