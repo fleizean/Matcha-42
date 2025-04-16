@@ -96,7 +96,8 @@ const MatchContent = () => {
   const initialValues = getInitialFilterValues();
   const [isPageVisible, setIsPageVisible] = useState(true);
   const initialLoadRef = useRef(true);
-  const visibilityChangeHandledRef = useRef(false);
+  const [keepProfilesDuringTabSwitch, setKeepProfilesDuringTabSwitch] = useState(true);
+  const [isHandlingTabReturn, setIsHandlingTabReturn] = useState(false);
 
   const [ageRange, setAgeRange] = useState([DEFAULT_MIN_AGE, DEFAULT_MAX_AGE]);
   const [fameRating, setFameRating] = useState([DEFAULT_MIN_FAME, DEFAULT_MAX_FAME]);
@@ -173,6 +174,19 @@ const MatchContent = () => {
     setAgeRange([filters.min_age, filters.max_age]);
   }, []);
 
+  useEffect(() => {
+    // When page becomes visible again, ensure loading states are cleared
+    if (isPageVisible) {
+      // Use a short timeout to allow other state updates to complete
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+        setIsFetchingMore(false);
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isPageVisible]);
+
   const observer = useRef<IntersectionObserver | null>(null);
   // Reference for the last profile element to trigger loading more
   const lastProfileRef = useCallback((node: HTMLDivElement) => {
@@ -215,21 +229,36 @@ const MatchContent = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       const isVisible = document.visibilityState === "visible";
+      const wasHidden = !isPageVisible;
+      
       setIsPageVisible(isVisible);
       
-      if (isVisible && !initialLoadRef.current && !visibilityChangeHandledRef.current) {
-        // Sadece sekme değişiminden geri dönüşlerde işlem yap
-        visibilityChangeHandledRef.current = true;
+      // Only handle tab returns (hidden -> visible) after initial load
+      if (isVisible && wasHidden && !initialLoadRef.current) {
+        console.log("Tab return detected, setting handling state");
+        
+        // Important: Set flag to keep profiles during tab switch
+        setKeepProfilesDuringTabSwitch(true);
+        
+        // Reset loading states
+        setIsLoading(false);
+        setIsFetchingMore(false);
+        setIsHandlingTabReturn(true);
+        
+        // Reset page to 0 but keep existing profiles
+        // We'll reload fresh data without clearing the list first
+        setPage(0);
+        
+        // Fetch fresh data after a short delay
         setTimeout(() => {
-          visibilityChangeHandledRef.current = false;
-        }, 1000);
+          fetchProfilesAfterTabReturn();
+        }, 100);
       }
     };
-
+  
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
-
+  }, [isPageVisible]);
   // Initialize data on first load - immediately fetch profiles
   useEffect(() => {
     const initializeData = async () => {
@@ -312,11 +341,11 @@ const MatchContent = () => {
 
   // Handle pagination (fetching more profiles)
   useEffect(() => {
-    if (page > 0 && session?.user?.accessToken && !isInitialLoad) {
+    if (page > 0 && session?.user?.accessToken && !isInitialLoad && !isHandlingTabReturn) {
       setIsFetchingMore(true);
       fetchProfiles();
     }
-  }, [page, session, isInitialLoad]);
+  }, [page, session, isInitialLoad, isHandlingTabReturn]);
 
   // Batch fetch liked status for all profiles
   const fetchLikedStatus = async (profileIds: string[]) => {
@@ -350,6 +379,113 @@ const MatchContent = () => {
       }
     } catch (error) {
       console.error('Error fetching liked profiles status:', error);
+    }
+  };
+
+  const fetchProfilesAfterTabReturn = async () => {
+    if (!session?.user?.accessToken) return;
+    
+    try {
+      // Don't use loading state for tab returns
+      
+      // Instead of just fetching the first page, we need to fetch all the pages 
+      // we've already loaded to maintain consistency
+      const totalPages = Math.ceil(profiles.length / 10);
+      const pagePromises = [];
+      
+      // Create promises for all loaded pages
+      for (let p = 0; p < totalPages; p++) {
+        const queryParams = new URLSearchParams({
+          limit: '10',
+          offset: (p * 10).toString(),
+        });
+  
+        // Add filter parameters
+        if (filtersApplied) {
+          queryParams.append('min_age', filters.min_age.toString());
+          queryParams.append('max_age', filters.max_age.toString());
+          queryParams.append('min_fame', filters.min_fame.toString());
+          queryParams.append('max_fame', filters.max_fame.toString());
+          queryParams.append('max_distance', filters.max_distance.toString());
+  
+          if (filters.tags.length > 0) {
+            filters.tags.forEach(tag => {
+              queryParams.append('tags', tag);
+            });
+          }
+        }
+  
+        // Add this page request to our promises array
+        pagePromises.push(
+          fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/suggested?${queryParams}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${session.user.accessToken}`,
+                'Content-Type': 'application/json',
+              }
+            }
+          ).then(response => {
+            if (!response.ok) {
+              throw new Error(`Error fetching page ${p}`);
+            }
+            return response.json();
+          })
+        );
+      }
+      
+      // Wait for all page requests to complete
+      const pagesResults = await Promise.all(pagePromises);
+      
+      // Flatten all pages into a single array of profiles
+      const allProfiles = pagesResults.flat();
+      
+      if (allProfiles.length === 0) {
+        // If no profiles returned, don't clear the existing profiles
+        console.log("No profiles returned after tab return, keeping existing profiles");
+      } else {
+        // Create a map to help us maintain ordering and remove duplicates
+        const profileMap = new Map();
+        
+        // First, add all existing profiles to the map
+        // This maintains the original order
+        profiles.forEach(profile => {
+          profileMap.set(profile.id, profile);
+        });
+        
+        // Then update or add any new profiles from our refreshed data
+        allProfiles.forEach(profile => {
+          // Only add if not already in the map, to maintain original order where possible
+          if (!profileMap.has(profile.id)) {
+            profileMap.set(profile.id, profile);
+          }
+        });
+        
+        // Convert back to array, maintaining order as much as possible
+        const updatedProfiles = Array.from(profileMap.values());
+        
+        // Only update if we have profiles to show
+        if (updatedProfiles.length > 0) {
+          console.log(`Setting ${updatedProfiles.length} profiles after tab return`);
+          setProfiles(updatedProfiles);
+          
+          // Update loadedProfileIds
+          const newIds = new Set<string>();
+          updatedProfiles.forEach(profile => newIds.add(profile.id));
+          setLoadedProfileIds(newIds);
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing profiles after tab return:", error);
+      // Don't clear profiles on error - keep showing existing profiles
+    } finally {
+      // Always reset the handling flag when done
+      setIsHandlingTabReturn(false);
+      
+      // Keep showing existing profiles for a bit before allowing empty state
+      setTimeout(() => {
+        setKeepProfilesDuringTabSwitch(false);
+      }, 3000);
     }
   };
 
@@ -483,15 +619,23 @@ const MatchContent = () => {
 
   // Fetch profiles from API
   const fetchProfiles = async () => {
+    // Don't fetch if we're handling a tab return or if no token is available
     if (!session?.user?.accessToken) return;
+    if (isHandlingTabReturn) {
+      console.log("Skipping fetchProfiles while handling tab return");
+      return;
+    }
     
     try {
-      if (page === 0) {
+      // Only set loading state for page 0 and when not handling tab return
+      if (page === 0 && !isHandlingTabReturn) {
         setIsLoading(true);
-      } else {
+      } else if (page > 0) {
         setIsFetchingMore(true);
       }
-
+  
+      // Rest of the function remains the same...
+      
       const queryParams = new URLSearchParams({
         limit: '10',
         offset: (page * 10).toString(),
@@ -565,38 +709,39 @@ const MatchContent = () => {
       }
   
       const data = await response.json();
-
-      
   
-      // Filter out profiles we've already loaded
-      if (document.visibilityState === "visible" && !initialLoadRef.current) {
-        setLoadedProfileIds(new Set());
-      }
-
-      // Filter out profiles only if it's not a tab switch return
-      let uniqueNewProfiles = data;
-      if (loadedProfileIds.size > 0) {
-        uniqueNewProfiles = data.filter((profile: SuggestedProfile) =>
-          !loadedProfileIds.has(profile.id)
-        );
+      if (page === 0) {
+        // On first page load or filter reset, replace all profiles
+        setProfiles(data);
+        
+        // Create a new set of loaded profile IDs
+        const newLoadedIds = new Set<string>();
+        data.forEach((profile: SuggestedProfile) => newLoadedIds.add(profile.id));
+        setLoadedProfileIds(newLoadedIds);
+      } else {
+        // For pagination, we need proper deduplication
+        // First, create a map of existing profiles for efficient lookup
+        const existingProfileMap = new Map();
+        profiles.forEach(profile => {
+          existingProfileMap.set(profile.id, true);
+        });
+        
+        // Filter out any profiles we already have in the list
+        const uniqueNewProfiles = data.filter(profile => !existingProfileMap.has(profile.id));
+        
+        // Update the profiles list with new unique profiles
+        if (uniqueNewProfiles.length > 0) {
+          setProfiles(prev => [...prev, ...uniqueNewProfiles]);
+          
+          // Update the set of profile IDs we've loaded
+          setLoadedProfileIds(prevIds => {
+            const newIds = new Set(prevIds);
+            uniqueNewProfiles.forEach(profile => newIds.add(profile.id));
+            return newIds;
+          });
+        }
       }
   
-      if (uniqueNewProfiles.length === 0 && data.length > 0) {
-        // Eğer tüm profiller zaten yüklenmişse ve veri boş değilse
-        // Filtrelemeyi atla ve doğrudan gelen verileri kullan
-        uniqueNewProfiles = data;
-        setLoadedProfileIds(new Set());
-      }
-      
-      // Update the set of profile IDs we've loaded
-      const updatedProfileIds = new Set(loadedProfileIds);
-      uniqueNewProfiles.forEach((profile: SuggestedProfile) => {
-        updatedProfileIds.add(profile.id);
-      });
-      setLoadedProfileIds(updatedProfileIds);
-  
-      // Update the profiles state
-      setProfiles(prev => page === 0 ? uniqueNewProfiles : [...prev, ...uniqueNewProfiles]);
       setHasMore(data.length === 10);
   
     } catch (error) {
@@ -612,6 +757,7 @@ const MatchContent = () => {
         console.error("Toast error:", toastError);
       }
     } finally {
+      // Always ensure loading states are reset
       setIsLoading(false);
       setIsFetchingMore(false);
     }
@@ -964,7 +1110,7 @@ const MatchContent = () => {
               </div>
             ) : (
               <>
-                {profiles.length === 0 ? (
+                {profiles.length === 0 && !keepProfilesDuringTabSwitch ? (
                   <div className="flex flex-col items-center justify-center h-60 text-center p-8 bg-[#2C2C2E] rounded-xl">
                     <div className="text-gray-300 text-xl mb-2">Bu filtrelere uygun profil bulunamadı</div>
                     <div className="text-gray-400 mb-4">Farklı filtre seçeneklerini deneyebilirsiniz</div>
