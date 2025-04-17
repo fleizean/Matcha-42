@@ -7,12 +7,11 @@ import AuthCheck from "@/components/AuthCheck";
 import { Inter } from "next/font/google";
 import "node_modules/react-modal-video/css/modal-video.css";
 import "../styles/index.css";
-import { SessionProvider, useSession } from "next-auth/react";
+import { SessionProvider } from "next-auth/react";
 import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Footer will always be shown regardless of user login status
 export default function RootLayout({
   children,
 }: {
@@ -21,12 +20,14 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head />
-      <body className={`bg-[#FCFCFC] dark:bg-black ${inter.className}`}>
+      {/* ✅ Flex düzen ve min-h-screen eklendi */}
+      <body className={`flex min-h-screen flex-col bg-[#FCFCFC] dark:bg-black ${inter.className}`}>
         <SessionProvider>
           <Providers>
             <AuthCheck />
             <Header />
-            {children}
+            {/* ✅ İçeriği saran main'e flex-1 verildi */}
+            <main className="flex-1">{children}</main>
             <Footer />
             <ScrollToTop />
           </Providers>

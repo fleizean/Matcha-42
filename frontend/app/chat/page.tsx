@@ -1377,14 +1377,15 @@ const ChatPage = () => {
                                 {!isCurrentUser && (
                                   <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
                                     <Image
-                                      src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
-                                      alt="User avatar"
-                                      width={32}
-                                      height={32}
-                                      className="object-cover"
-                                      priority
-                                      unoptimized
-                                    />
+  src={activeChatUser?.avatar || '/images/defaults/man-default.png'}
+  alt="User avatar"
+  width={32}
+  height={32}
+  className="object-cover h-auto w-8 rounded-full"
+  priority
+  unoptimized
+/>
+
                                   </div>
                                 )}
                                 <div

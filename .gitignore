@@ -16,6 +16,8 @@ node_modules/
 downloaded_faces/
 next-env.d.ts
 
+downloaded_faces-*.zip
+
 # Next.js build output
 .next/
 out/

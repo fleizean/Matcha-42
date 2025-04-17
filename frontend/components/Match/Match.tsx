@@ -906,7 +906,7 @@ const MatchContent = () => {
   };
 
   return (
-    <section className="pt-16 md:pt-20 lg:pt-28 bg-[#1E1E1E]">
+    <section className="pt-[100px] pb-[60px] bg-[#1C1C1E] min-h-screen">
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap">
           {/* Filter Sidebar - Fixed position on scroll */}
@@ -1279,7 +1279,7 @@ const MatchContent = () => {
 // Loading component to show while suspense is active
 const LoadingUI = () => {
   return (
-    <section className="pt-16 md:pt-20 lg:pt-28 bg-[#1E1E1E] min-h-screen">
+    <section className="pt-[100px] pb-[60px] bg-[#1C1C1E] min-h-screen">
       <div className="container mx-auto px-4">
         <div className="flex justify-center items-center h-60">
           <div className="animate-pulse flex flex-col items-center">
