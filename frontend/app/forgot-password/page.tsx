@@ -21,25 +21,29 @@ const ForgotPasswordPage = () => {
   }
   , []);
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+    const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!mail) {
       toast.error("Lütfen e-posta adresinizi giriniz.");
       return;
     }
-
+  
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/forgot-password?email=${mail}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mail }), // Email'i JSON gövdesinde gönderiyoruz
       });
-
+  
       if (res.ok) {
         toast.success("Şifre sıfırlama talimatları e-posta adresinize gönderildi.");
         setTimeout(() => {
           router.push("/signin");
         }, 2000);
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.message || "Bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
       }
     } catch (error) {
       toast.error("Bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
