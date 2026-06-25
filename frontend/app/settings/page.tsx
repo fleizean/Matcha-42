@@ -489,7 +489,12 @@ const SettingsPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Şifre değiştirme başarısız');
+        const errorMessage = typeof data.detail === 'string'
+          ? data.detail
+          : Array.isArray(data.detail)
+          ? data.detail[0]?.msg
+          : null;
+        throw new Error(errorMessage || 'Şifre değiştirme başarısız');
       }
 
       toast.success('Şifre başarıyla değiştirildi');
