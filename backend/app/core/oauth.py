@@ -39,7 +39,6 @@ class OAuth42Provider:
             "redirect_uri": self.redirect_uri,
             "grant_type": "authorization_code"
         }
-        
         async with httpx.AsyncClient() as client:
             response = await client.post(self.TOKEN_URL, data=data)
             

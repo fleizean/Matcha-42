@@ -317,6 +317,84 @@ async def generate_fake_users(count: int = 500) -> None:
     print("Connected to database")
     
     try:
+        # Create admin user if they don't exist
+        admin_exists = await conn.fetchval("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)", "admin")
+        if not admin_exists:
+            print("Creating admin user...")
+            admin_user_id = str(uuid.uuid4())
+            admin_profile_id = str(uuid.uuid4())
+            hashed_admin_password = get_password_hash("Admin123!")
+            
+            await conn.execute("""
+            INSERT INTO users (
+                id, username, email, first_name, last_name, 
+                hashed_password, is_active, is_verified, 
+                created_at, is_online, last_online
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            """, 
+                admin_user_id, 
+                "admin",
+                "admin@matcha.com", 
+                "Admin",
+                "Matcha",
+                hashed_admin_password,
+                True,  # is_active
+                True,  # is_verified
+                datetime.now(timezone.utc),
+                False,  # is_online
+                datetime.now(timezone.utc)
+            )
+            
+            await conn.execute("""
+            INSERT INTO profiles (
+                id, user_id, gender, sexual_preference, biography,
+                latitude, longitude, fame_rating, is_complete, birth_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            """,
+                admin_profile_id,
+                admin_user_id,
+                "male",
+                "bisexual",
+                "Sistem yöneticisi ve Matcha geliştiricisi.",
+                41.0082,  # Istanbul Lat
+                28.9784,  # Istanbul Lng
+                5.0,      # fame_rating
+                True,     # is_complete
+                datetime(1990, 1, 1).date()
+            )
+            
+            # Copy a profile picture for admin
+            if face_images:
+                relative_path = await copy_profile_picture(admin_profile_id, face_images[0])
+                if relative_path:
+                    await conn.execute("""
+                    INSERT INTO profile_pictures (
+                        profile_id, file_path, backend_url, is_primary
+                    ) VALUES ($1, $2, $3, $4)
+                    """,
+                        admin_profile_id,
+                        f"media/{relative_path}",
+                        f"{BACKEND_URL}/media/{relative_path.replace(os.sep, '/')}",
+                        True  # is_primary
+                    )
+            
+            # Add some tags for admin
+            admin_tags = ["yazılım", "teknoloji", "kahve", "sinema", "bilim"]
+            for tag_name in admin_tags:
+                tag_id = await conn.fetchval("SELECT id FROM tags WHERE name = $1", tag_name)
+                if not tag_id:
+                    tag_id = await conn.fetchval("""
+                    INSERT INTO tags (name) VALUES ($1) RETURNING id
+                    """, tag_name)
+                await conn.execute("""
+                INSERT INTO profile_tags (profile_id, tag_id)
+                VALUES ($1, $2) ON CONFLICT DO NOTHING
+                """, admin_profile_id, tag_id)
+                
+            print("Admin user created successfully (username: admin, password: Admin123!)")
+        else:
+            print("Admin user already exists, skipping admin creation.")
+
         # Prepare fake user data
         users_data = []
         

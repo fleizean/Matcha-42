@@ -19,9 +19,36 @@ async def create_notification(conn, user_id, sender_id, notification_type, conte
     VALUES ($1, $2, $3, $4, false, $5)
     RETURNING id, user_id, sender_id, type, content, is_read, created_at
     """
-    return await conn.fetchrow(
+    row = await conn.fetchrow(
         query, user_id, sender_id, notification_type, content, datetime.now(timezone.utc)
     )
+    
+    # Send email notification for important events
+    if notification_type in ["like", "match", "message", "visit"]:
+        try:
+            # Get recipient email and username
+            recipient = await conn.fetchrow("SELECT email, username FROM users WHERE id = $1", user_id)
+            # Get sender first name
+            sender = await conn.fetchrow("SELECT first_name FROM users WHERE id = $1", sender_id)
+            
+            if recipient and sender:
+                from app.services.email import send_notification_email
+                import asyncio
+                
+                asyncio.create_task(
+                    send_notification_email(
+                        email=recipient['email'],
+                        username=recipient['username'],
+                        notification_type=notification_type,
+                        sender_name=sender['first_name']
+                    )
+                )
+        except Exception as e:
+            # Do not block the database transaction/operation if email fails
+            import logging
+            logging.error(f"Error sending notification email: {str(e)}")
+            
+    return row
 
 async def get_notifications(conn, user_id, limit=20, offset=0, unread_only=False):
     """Get notifications for a user with sender username"""

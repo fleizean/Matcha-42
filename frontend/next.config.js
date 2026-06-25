@@ -34,6 +34,7 @@ const nextConfig = {
   },
   reactStrictMode: true,
   output: 'standalone',
+  turbopack: {},
   async rewrites() {
     return [
       {

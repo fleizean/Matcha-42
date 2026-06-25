@@ -92,6 +92,7 @@ async def send_notification_email(email: EmailStr, username: str, notification_t
         "like": f"{sender_name} sizi beğendi!",
         "match": f"{sender_name} ile eşleştiniz!",
         "message": f"{sender_name}'den yeni bir mesaj!",
+        "visit": f"{sender_name} profilinizi ziyaret etti!",
     }.get(notification_type, "CrushIt'den yeni bir bildirim!")
     
     login_url = f"{settings.FRONTEND_URL}/login"

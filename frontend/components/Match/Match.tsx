@@ -67,6 +67,10 @@ enum SortOption {
 
 const MatchContent = () => {
   const router = useRouter();
+
+  useEffect(() => {
+    document.title = "Ana Sayfa | CrushIt";
+  }, []);
   const searchParams = useSearchParams();
 
   const DEFAULT_MIN_AGE = 18;

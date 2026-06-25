@@ -7,6 +7,7 @@ import { FiUser, FiLock, FiMapPin, FiBell, FiUserX, FiX, FiPlus } from "react-ic
 import { toast, Toaster } from "react-hot-toast";
 import { FiLoader } from "react-icons/fi";
 import { SimpleMap } from "@/components/MapSelector/SimpleMap";
+import { ImageEditorModal } from "@/components/ImageEditorModal";
 
 interface ProfilePicture {
   id: string;
@@ -764,18 +765,27 @@ const SettingsPage = () => {
       if ("geolocation" in navigator) {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, (error) => {
-              if (error.code === error.PERMISSION_DENIED) {
-                reject(new Error('PERMISSION_DENIED'));
-              } else {
-                reject(error);
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              (error) => {
+                if (error.code === error.PERMISSION_DENIED) {
+                  reject(new Error('PERMISSION_DENIED'));
+                } else {
+                  reject(error);
+                }
+              },
+              {
+                timeout: 5000,
+                maximumAge: 0,
+                enableHighAccuracy: false
               }
-            });
+            );
           });
 
           await updateLocationInfo(pos.coords.latitude, pos.coords.longitude);
           return;
         } catch (geoError) {
+          console.warn('Browser geolocation failed/timed out, falling back to IP:', geoError);
         }
       }
 
@@ -805,16 +815,34 @@ const SettingsPage = () => {
 
 
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
+  const [editingImage, setEditingImage] = useState<string | null>(null);
+  const [editingPhotoIndex, setEditingPhotoIndex] = useState<number | null>(null);
+  const [draggedOverIndex, setDraggedOverIndex] = useState<number | null>(null);
+
+  const handlePhotoSelect = (file: File, index: number) => {
     if (!file) return;
+    
+    // Check file type
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif"];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!allowedExtensions.includes(fileExt)) {
+      toast.error("Desteklenmeyen dosya türü. İzin verilenler: .jpg, .jpeg, .png, .gif");
+      return;
+    }
 
-    // Show loading state
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditingImage(reader.result as string);
+      setEditingPhotoIndex(index);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadCroppedPhoto = async (blob: Blob, index: number) => {
     setIsLoading(true);
-
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', new File([blob], `profile_${index}.jpg`, { type: 'image/jpeg' }));
       formData.append('is_primary', (!profileInfo.photos.length).toString()); // First photo is primary
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/profiles/me/pictures`, {
@@ -830,15 +858,41 @@ const SettingsPage = () => {
         throw new Error(errorData.detail || 'Fotoğraf yüklenirken bir hata oluştu');
       }
 
-      // Refresh profile to get updated photos
       await fetchProfile();
       toast.success('Fotoğraf başarıyla yüklendi');
-
+      setEditingImage(null);
+      setEditingPhotoIndex(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Fotoğraf yüklenirken bir hata oluştu';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handlePhotoSelect(file, index);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    setDraggedOverIndex(index);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDraggedOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    setDraggedOverIndex(null);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handlePhotoSelect(file, index);
     }
   };
 
@@ -1059,7 +1113,17 @@ const SettingsPage = () => {
                       <h3 className="text-xl font-semibold text-white mb-4">Profil Fotoğrafları</h3>
                       <div className="grid grid-cols-5 gap-4">
                         {[...Array(5)].map((_, index) => (
-                          <div key={index} className="aspect-square rounded-lg bg-[#3C3C3E] overflow-hidden relative">
+                          <div
+                            key={index}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, index)}
+                            className={`aspect-square rounded-lg bg-[#3C3C3E] overflow-hidden relative border-2 transition-all ${
+                              draggedOverIndex === index
+                                ? "border-[#D63384] scale-105 bg-[#2C2C2E]"
+                                : "border-transparent"
+                            }`}
+                          >
                             {profileInfo.photos[index] ? (
                               <>
                                 <Image
@@ -1098,7 +1162,7 @@ const SettingsPage = () => {
                                   type="file"
                                   className="hidden"
                                   accept="image/*"
-                                  onChange={(e) => handlePhotoUpload(e, index)}
+                                  onChange={(e) => handleFileInputChange(e, index)}
                                 />
                                 <FiPlus className="text-gray-400 w-8 h-8" />
                               </label>
@@ -1106,6 +1170,16 @@ const SettingsPage = () => {
                           </div>
                         ))}
                       </div>
+                      {editingImage && editingPhotoIndex !== null && (
+                        <ImageEditorModal
+                          imageUrl={editingImage}
+                          onClose={() => {
+                            setEditingImage(null);
+                            setEditingPhotoIndex(null);
+                          }}
+                          onSave={(blob) => uploadCroppedPhoto(blob, editingPhotoIndex)}
+                        />
+                      )}
                     </div>
 
                     {/* Basic Info */}

@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { IoIosSettings } from "react-icons/io";
 import ThemeToggler from "./ThemeToggler";
 import menuData from "./menuData";
-import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken } from "react-icons/fa";
+import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken, FaMapMarkedAlt } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -764,6 +764,14 @@ const getNotificationIcon = (type: string) => {
                             Eşleştirme
                           </Link>
 
+                          <Link
+                            href="/map"
+                            className="flex items-center px-4 py-2 text-base text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
+                          >
+                            <FaMapMarkedAlt className="mr-2" />
+                            Harita
+                          </Link>
+
 
 
                           <Link
@@ -855,7 +863,7 @@ const getNotificationIcon = (type: string) => {
                   </nav>
                 </div>
                 {/* Desktop Menu */}
-                <div className="hidden lg:flex lg:items-center lg:space-x-12">
+                <div className="hidden lg:flex lg:items-center lg:space-x-6 xl:space-x-10">
                   {status === "authenticated" && session ? (
                     <>
                       <Link
@@ -872,6 +880,14 @@ const getNotificationIcon = (type: string) => {
                       >
                         <FaKissWinkHeart className="mr-2 text-pink-500 transition-all duration-300 group-hover:scale-110" />
                         Eşleştirme
+                      </Link>
+
+                      <Link
+                        href="/map"
+                        className="flex items-center text-base font-medium text-white/90 hover:text-[#D63384] transition-colors duration-300"
+                      >
+                        <FaMapMarkedAlt className="mr-2 text-pink-500 transition-all duration-300 group-hover:scale-110" />
+                        Harita
                       </Link>
 
 
@@ -932,15 +948,15 @@ const getNotificationIcon = (type: string) => {
                           </button>
                         </div>
                       </div>
-                      <div className="relative" ref={notificationRef}>
+                      <div className="relative flex items-center" ref={notificationRef}>
                         <button
                           onClick={toggleNotifications}
-                          className="flex items-center text-base font-medium text-white/90 hover:text-[#D63384] transition-colors duration-300"
+                          className="relative flex items-center text-base font-medium text-white/90 hover:text-[#D63384] transition-colors duration-300 p-1"
                           aria-label="Notifications"
                         >
-                          <FaBell className="text-pink-500 transition-all duration-300 hover:scale-110" />
+                          <FaBell size={22} className="text-pink-500 transition-all duration-300 hover:scale-110" />
                           {notificationCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-[#D63384] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 bg-[#D63384] text-white text-[9px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center border-2 border-[#1C1C1E] shadow-sm">
                               {notificationCount > 9 ? '9+' : notificationCount}
                             </span>
                           )}

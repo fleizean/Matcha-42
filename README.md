@@ -2,6 +2,14 @@
 
 A modern dating web application inspired by Tinder, built as part of 42 School's curriculum.
 
+> [!IMPORTANT]
+> **Önemli Test Verisi (downloaded_faces):**
+> Veritabanı popülasyon betiğinin (`populate.py`) çalışabilmesi ve 500 farklı profilin oluşturulabilmesi için gerekli olan yüz görsellerini barındıran `downloaded_faces` klasörünü aşağıdaki Google Drive linkinden indirmeli ve **`backend/`** dizininin içine (`backend/downloaded_faces` olacak şekilde) yerleştirmelisiniz.
+>
+> 🔗 **[Google Drive: downloaded_faces](https://drive.google.com/drive/folders/100Xm0gyBcTIXgNpksuGX3dLh7A4pHHSy?usp=drive_link)**
+>
+> Görselleri yerleştirdikten sonra veritabanını doldurmak için kök dizindeki `./populate.sh` betiğini çalıştırabilirsiniz.
+
 ## Tech Stack
 
 - Frontend: Next.js

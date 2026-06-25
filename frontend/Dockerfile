@@ -1,5 +1,7 @@
 
-FROM node:slim AS base
+FROM node:20-slim AS base
+
+RUN corepack enable
 
 # Install dependencies only when needed
 FROM base AS deps
