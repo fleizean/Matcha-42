@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict
 import uuid
 from datetime import datetime, timezone
@@ -317,9 +318,10 @@ async def oauth_42_callback(
             )
             
     except Exception as e:
+        logging.error(f"OAuth callback error: {str(e)}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": f"OAuth callback error: {str(e)}"}
+            content={"detail": "OAuth ile giriş sırasında bir hata oluştu"}
         )
 
 @router.post("/login/json", response_model=TokenResponse)

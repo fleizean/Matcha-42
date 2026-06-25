@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from typing import List, Optional
 import uuid
 import os
-import shutil
 
 from app.core.db import get_connection
 from app.core.security import get_current_verified_user
@@ -396,16 +395,40 @@ async def upload_profile_picture(
             detail="Profile not found"
         )
     
-    # Validate file type
+    # Validate file extension
     allowed_extensions = [".jpg", ".jpeg", ".png", ".gif"]
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    
+    file_ext = os.path.splitext(file.filename or "")[1].lower()
+
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
         )
-    
+
+    # Read the upload once, enforce a size limit, and confirm the content is
+    # actually an image of the claimed type (don't trust the filename/extension
+    # or the client-supplied Content-Type header alone).
+    MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+    contents = await file.read()
+
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum allowed size is 5 MB"
+        )
+
+    image_signatures = {
+        ".jpg": [b"\xff\xd8\xff"],
+        ".jpeg": [b"\xff\xd8\xff"],
+        ".png": [b"\x89PNG\r\n\x1a\n"],
+        ".gif": [b"GIF87a", b"GIF89a"],
+    }
+    if not any(contents.startswith(sig) for sig in image_signatures[file_ext]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match a valid image of the declared type"
+        )
+
     # Check picture count limit
     pic_count = await conn.fetchval("""
     SELECT COUNT(*) FROM profile_pictures
@@ -427,7 +450,7 @@ async def upload_profile_picture(
     file_path = os.path.join(upload_dir, filename)
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
     
     # Normalize file path for database
     relative_path = os.path.relpath(file_path, start=os.path.dirname(settings.MEDIA_ROOT))
@@ -705,7 +728,7 @@ async def get_suggested(
         logging.error(f"Error in get_suggested: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching suggested profiles: {str(e)}"
+            detail="Error fetching suggested profiles"
         )
 
 @router.get("/{username}")
@@ -796,7 +819,7 @@ async def get_profile(
         logging.error(f"Error in get_profile: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching profile: {str(e)}"
+            detail="Error fetching profile"
         )
     
 @router.get("/get-for-chat/{username}")
@@ -843,7 +866,7 @@ async def get_profile_for_chat(
         logging.error(f"Error in get_profile: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching profile: {str(e)}"
+            detail="Error fetching profile"
         )
 
 @router.get("/get-by-user_id/{user_id}")
@@ -890,7 +913,7 @@ async def get_profile_by_user_id_endpoint(
         logging.error(f"Error in get_profile_by_user_id: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching profile: {str(e)}"
+            detail="Error fetching profile"
         )
 
 @router.get("/check-real-profile/{username}")
@@ -918,7 +941,7 @@ async def check_real_profile(
         logging.error(f"Error in check_real_profile: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error checking profile: {str(e)}"
+            detail="Error checking profile"
         )
 
 @router.put("/me/delete-account")
@@ -994,7 +1017,7 @@ async def delete_account(
         logging.error(f"Error in delete_account: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting account: {str(e)}"
+            detail="Error deleting account"
         )    
     
 # Add this endpoint to backend/app/api/profiles.py
@@ -1056,7 +1079,7 @@ async def delete_oauth_account(
         logging.error(f"Error in delete_oauth_account: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting account: {str(e)}"
+            detail="Error deleting account"
         )
 
 @router.post("/liked-status")
@@ -1103,7 +1126,7 @@ async def get_liked_status_batch(
         print(f"Error in get_liked_status_batch: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error checking liked status: {str(e)}"
+            detail="Error checking liked status"
         )
 
 

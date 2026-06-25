@@ -19,6 +19,7 @@ next-env.d.ts
 # Next.js build output
 .next/
 out/
+*.tsbuildinfo
 
 # Python
 __pycache__/

@@ -38,7 +38,19 @@ def password_check(v: str) -> str:
     
     complexity_score = sum([has_upper, has_lower, has_digit, has_special])
     if complexity_score < 3:
-        raise ValueError("Şifre yeterince karmaşık değil")
+        missing = []
+        if not has_upper:
+            missing.append("büyük harf")
+        if not has_lower:
+            missing.append("küçük harf")
+        if not has_digit:
+            missing.append("rakam")
+        if not has_special:
+            missing.append("özel karakter (örn. !?#%)")
+        raise ValueError(
+            "Şifre yeterince karmaşık değil, eksik: " + ", ".join(missing) +
+            " (en az 3'ünü içermeli: büyük harf, küçük harf, rakam, özel karakter)"
+        )
     
     # Check against common passwords
     common_passwords = [

@@ -9,6 +9,8 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 > 🔗 **[Google Drive: downloaded_faces](https://drive.google.com/drive/folders/100Xm0gyBcTIXgNpksuGX3dLh7A4pHHSy?usp=drive_link)**
 >
 > Görselleri yerleştirdikten sonra veritabanını doldurmak için kök dizindeki `./populate.sh` betiğini çalıştırabilirsiniz.
+>
+> `./populate.sh` çalıştığında, 500 sahte profilin yanında giriş yapılabilir bir **admin** hesabı da oluşturulur — Kullanıcı adı: `admin`, Şifre: `Admin123!`.
 
 ## Tech Stack
 
@@ -73,7 +75,7 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <summary><b>🏠 User Profile</b></summary>
 <div class="checklist-container">
 
-- [x] Require users to complete profile with: 🤔
+- [x] Require users to complete profile with:
   - [x] Gender
   - [x] Sexual Preferences
   - [x] Biography
@@ -84,7 +86,7 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 - [x] Show who liked their profile
 - [x] Implement public "fame rating" for each user
 - [x] Determine user location via GPS (with manual override option)
-- [x] If GPS tracking is disabled, use an alternative location method 🤔
+- [x] If GPS tracking is disabled, use an alternative location method
 
 </div>
 </details>
@@ -116,12 +118,12 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <summary><b>🔬 Research (Advanced Search)</b></summary>
 <div class="checklist-container">
 
-- [x] Allow users to search with criteria: 🤔
-  - [x] Age range 🤔
-  - [x] "Fame rating" range 🤔
-  - [x] Location 🤔
-  - [x] Interest tags 🤔
-- [x] Allow sorting and filtering in search results 🤔
+- [x] Allow users to search with criteria:
+  - [x] Age range
+  - [x] "Fame rating" range
+  - [x] Location
+  - [x] Interest tags
+- [x] Allow sorting and filtering in search results
 
 </div>
 </details>
@@ -159,13 +161,26 @@ A modern dating web application inspired by Tinder, built as part of 42 School's
 <div class="checklist-container">
 
 - [x] Notify users when:
-  - [x] They receive a new like 🤔
+  - [x] They receive a new like
   - [x] Their profile is viewed
   - [x] They receive a new message
   - [X] A "liked" user likes them back
-  - [X] A connected user "unlikes" them 🤔
+  - [X] A connected user "unlikes" them
 - [x] Display unread notifications on all pages
 - [x] Ensure notifications update within 10 seconds
+
+</div>
+</details>
+
+### 🎁 Bonus Features
+
+<details>
+<summary><b>✨ Implemented Bonus Modules</b></summary>
+<div class="checklist-container">
+
+- [x] OAuth login strategy (42 Intra)
+- [x] Premium photo gallery: drag & drop upload with an in-browser editor (`ImageEditorModal`) for 1:1 cropping, rotation and filters (brightness/contrast/grayscale/sepia)
+- [x] Interactive map of users (`/map`): precise browser GPS localization, Leaflet markers for nearby matches, and Like/Unlike directly from the map popup
 
 </div>
 </details>

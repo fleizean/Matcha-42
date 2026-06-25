@@ -112,11 +112,21 @@ const handler = NextAuth({
           if (credentials?.loginType === 'oauth') {
             // For OAuth logins, we've already validated at the backend
             // Just return a user object with the tokens
+            let expirationTime = Date.now() + 15 * 60 * 1000;
+            try {
+              const tokenData = JSON.parse(atob((credentials.accessToken as string).split('.')[1]));
+              if (tokenData?.exp) {
+                expirationTime = tokenData.exp * 1000;
+              }
+            } catch (error) {
+              console.error("Error parsing OAuth access token expiration:", error);
+            }
+
             return {
               id: 'oauth-user',  // Will be replaced by actual user data in session callback
               accessToken: credentials.accessToken,
               refreshToken: credentials.refreshToken,
-              expiration: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes from now
+              expiration: new Date(expirationTime).toISOString()
             };
           }
           

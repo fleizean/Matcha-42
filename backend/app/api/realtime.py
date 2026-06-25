@@ -375,7 +375,7 @@ async def read_conversations(
         logger.error(f"Error fetching conversations: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching conversations: {str(e)}"
+            detail="Error fetching conversations"
         )
     
 @router.get("/messages/unread/count")

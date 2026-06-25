@@ -1111,7 +1111,7 @@ const SettingsPage = () => {
                     {/* Profile Photos */}
                     <div>
                       <h3 className="text-xl font-semibold text-white mb-4">Profil Fotoğrafları</h3>
-                      <div className="grid grid-cols-5 gap-4">
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4">
                         {[...Array(5)].map((_, index) => (
                           <div
                             key={index}
@@ -1324,23 +1324,23 @@ const SettingsPage = () => {
 
                     <div>
                       <label className="block text-gray-300 mb-2">Konum</label>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           value={profileInfo.location}
                           readOnly
                           placeholder="Şehir, Ülke"
-                          className="flex-1 bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
+                          className="flex-1 min-w-0 bg-[#3C3C3E] text-white rounded-lg px-4 py-2 border border-[#4C4C4E] focus:outline-none focus:border-[#D63384]"
                         />
                         <button
                           onClick={handleLocationDetect}
-                          className="bg-[#3C3C3E] text-white px-4 py-2 rounded-lg hover:bg-[#4C4C4E] transition-colors flex items-center space-x-2"
+                          className="bg-[#3C3C3E] text-white px-4 py-2 rounded-lg hover:bg-[#4C4C4E] transition-colors flex items-center justify-center space-x-2 whitespace-nowrap"
                         >
                           <FiMapPin />
                           <span>Konumu Algıla</span>
                         </button>
                         <button
                           onClick={() => setShowMap(!showMap)}
-                          className="bg-[#3C3C3E] text-white px-4 py-2 rounded-lg hover:bg-[#4C4C4E] transition-colors flex items-center space-x-2"
+                          className="bg-[#3C3C3E] text-white px-4 py-2 rounded-lg hover:bg-[#4C4C4E] transition-colors flex items-center justify-center space-x-2 whitespace-nowrap"
                         >
                           <FiMapPin />
                           <span>Haritadan Seç</span>

@@ -91,6 +91,7 @@ const ChatPage = () => {
   const { data: session } = useSession();
   const router = useRouter();
   const wsService = useRef<WebSocketService>(WebSocketService.getInstance());
+  const hasAutoSelectedChat = useRef(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
@@ -356,6 +357,7 @@ const ChatPage = () => {
         const urlConversation = data.find(c => c.user.id === userIdFromUrl);
 
         if (urlConversation) {
+          hasAutoSelectedChat.current = true;
           // URL'deki kullanıcı konuşmalar arasında varsa, onu seç
           setActiveChat(userIdFromUrl);
           setActiveChatUser({
@@ -373,7 +375,9 @@ const ChatPage = () => {
         }
       }
       // URL'de kullanıcı yoksa ve aktif sohbet yoksa, ilk konuşmayı seç
-      else if (data.length > 0 && !activeChat) {
+      // (sadece bir kere — yoksa back butonuyla kapatılan sohbet poll'da geri açılır)
+      else if (data.length > 0 && !activeChat && !hasAutoSelectedChat.current) {
+        hasAutoSelectedChat.current = true;
         setActiveChat(data[0].user.id);
         setActiveChatUser({
           id: data[0].user.id,
@@ -621,12 +625,13 @@ const ChatPage = () => {
     if (session?.user?.accessToken && conversations.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const userIdFromUrl = params.get('user');
-      
+
       // If URL has a user parameter, find that conversation
       if (userIdFromUrl) {
         const urlConversation = conversations.find(c => c.user.id === userIdFromUrl);
         
         if (urlConversation) {
+          hasAutoSelectedChat.current = true;
           // Set active chat and fetch messages
           setActiveChat(userIdFromUrl);
           
@@ -646,7 +651,10 @@ const ChatPage = () => {
         }
       }
       // If no user in URL and no active chat yet, select the first conversation
-      else if (!activeChat) {
+      // (only ever auto-select once — otherwise a session refresh would re-open
+      // a chat the user deliberately closed via the mobile back button)
+      else if (!activeChat && !hasAutoSelectedChat.current) {
+        hasAutoSelectedChat.current = true;
         setActiveChat(conversations[0].user.id);
         
         setActiveChatUser({
@@ -671,8 +679,9 @@ const ChatPage = () => {
     const params = new URLSearchParams(window.location.search);
     const userIdFromUrl = params.get('user');
 
-    if (userIdFromUrl && session?.user?.accessToken) {
+    if (userIdFromUrl && session?.user?.accessToken && !hasAutoSelectedChat.current) {
       // URL'de bir kullanıcı ID'si varsa, konuşmalar yüklendikten sonra kontrol edilecek
+      hasAutoSelectedChat.current = true;
 
       // Aktif sohbeti doğrudan ayarla (konuşmalar daha sonra kontrol edilecek)
       setActiveChat(userIdFromUrl);
@@ -807,7 +816,7 @@ const ChatPage = () => {
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   };
 
@@ -1032,9 +1041,9 @@ const ChatPage = () => {
   }, [activeChat, conversations]);
 
   return (
-    <section className="pt-[100px] pb-[60px] bg-[#1C1C1E] min-h-screen">
+    <section className="pt-4 lg:pt-[100px] pb-[60px] bg-[#1C1C1E] min-h-screen">
       <Toaster position="top-right" />
-      <div className="contacontainer mx-auto px-4 h-full">
+      <div className="container mx-auto px-4 h-full">
         <div className="flex flex-col lg:flex-row bg-[#2C2C2E] rounded-xl overflow-hidden h-[calc(100vh-160px)]">
           {/* Chat List - Make it full width on mobile */}
           <div className={`${activeChat ? 'hidden lg:block' : 'block'} lg:w-1/3 border-r border-[#3C3C3E] h-full`}>
@@ -1273,6 +1282,8 @@ const ChatPage = () => {
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent navigating to profile when clicking back button
                           setActiveChat(null);
+                          // Clear ?user= from the URL so the session-refresh effect doesn't reopen this chat
+                          router.replace('/chat');
                         }}
                       >
                         <FiArrowLeft size={20} />

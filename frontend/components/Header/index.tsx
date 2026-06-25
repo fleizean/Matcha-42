@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { IoIosSettings } from "react-icons/io";
+import { IoMdClose } from "react-icons/io";
 import ThemeToggler from "./ThemeToggler";
 import menuData from "./menuData";
 import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken, FaMapMarkedAlt } from "react-icons/fa";
@@ -66,6 +67,19 @@ const Header = () => {
       window.removeEventListener("scroll", handleStickyNavbar);
     };
   }, []);
+
+  // Close the mobile nav whenever the route changes (e.g. after clicking a menu link)
+  useEffect(() => {
+    setNavbarOpen(false);
+  }, [pathname]);
+
+  // Lock background scroll while the full-screen mobile nav overlay is open
+  useEffect(() => {
+    document.body.style.overflow = navbarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [navbarOpen]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -635,8 +649,8 @@ const getNotificationIcon = (type: string) => {
     <>
       <div className="pt-[120px] lg:pt-0 bg-white dark:bg-dark">
         <header
-          className={`header left-0 top-0 z-40 flex w-full items-center mb-[72px] lg:mb-0 ${sticky
-            ? "dark:bg-gray-dark dark:shadow-sticky-dark fixed z-[9999] bg-white !bg-opacity-80 shadow-sticky backdrop-blur-sm transition"
+          className={`header left-0 top-0 z-[9999] flex w-full items-center mb-[72px] lg:mb-0 ${sticky
+            ? "dark:bg-gray-dark dark:shadow-sticky-dark fixed bg-white !bg-opacity-80 shadow-sticky backdrop-blur-sm transition"
             : "absolute bg-transparent"
             }`}
         >
@@ -689,9 +703,16 @@ const getNotificationIcon = (type: string) => {
                   </button>
                   <nav
                     id="navbarCollapse"
-                    className={`navbar absolute right-0 top-[72px] z-30 w-[250px] rounded border-[.5px] border-body-color/50 bg-white px-6 py-4 duration-300 dark:border-body-color/20 dark:bg-dark lg:visible lg:static lg:w-auto lg:border-none lg:!bg-transparent lg:p-0 lg:opacity-100 ${navbarOpen ? "visibility opacity-100" : "invisible opacity-0"
+                    className={`navbar fixed inset-0 z-[9990] w-full h-screen overflow-y-auto bg-white px-6 py-4 pt-20 duration-300 dark:bg-dark lg:visible lg:static lg:inset-auto lg:z-auto lg:h-auto lg:w-auto lg:overflow-visible lg:border-none lg:!bg-transparent lg:p-0 lg:pt-0 lg:opacity-100 ${navbarOpen ? "visibility opacity-100" : "invisible opacity-0 pointer-events-none lg:pointer-events-auto"
                       }`}
                   >
+                    <button
+                      onClick={() => setNavbarOpen(false)}
+                      aria-label="Menüyü Kapat"
+                      className="absolute right-4 top-4 text-dark dark:text-white lg:hidden"
+                    >
+                      <IoMdClose size={28} />
+                    </button>
                     <ul className="block lg:flex lg:space-x-12">
                       {/* Existing menu items */}
                       {menuData.map((menuItem, index) => (
@@ -744,7 +765,7 @@ const getNotificationIcon = (type: string) => {
                       ))}
                     </ul>
                     {/* Right side area */}
-                    <div className="block lg:hidden border-t border-gray-200 dark:border-gray-600 mt-4 pt-4">
+                    <div className="block lg:hidden">
 
                       {status === "authenticated" && session ? (
                         <div className="flex flex-col space-y-2"> {/* Changed to flex-col */}
@@ -964,7 +985,7 @@ const getNotificationIcon = (type: string) => {
 
                         {/* Notification Dropdown */}
                         {showNotifications && (
-                        <div className="absolute right-0 mt-2 w-80 bg-[#2C2C2E]/95 backdrop-blur-sm rounded-xl shadow-lg border border-pink-500/20 z-50">
+                        <div className="absolute right-0 top-full mt-2 w-80 bg-[#2C2C2E]/95 backdrop-blur-sm rounded-xl shadow-lg border border-pink-500/20 z-50">
                           <div className="p-4 border-b border-[#3C3C3E] flex justify-between items-center">
                             <h3 className="text-white font-medium">Bildirimler</h3>
                             {notificationCount > 0 && (
