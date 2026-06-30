@@ -93,6 +93,9 @@ async def send_notification_email(email: EmailStr, username: str, notification_t
         "match": f"{sender_name} ile eşleştiniz!",
         "message": f"{sender_name}'den yeni bir mesaj!",
         "visit": f"{sender_name} profilinizi ziyaret etti!",
+        "event_invite": f"{sender_name} size bir randevu daveti gönderdi!",
+        "event_accepted": f"{sender_name} randevu davetinizi kabul etti!",
+        "event_cancelled": f"{sender_name} randevuyu iptal etti!",
     }.get(notification_type, "CrushIt'den yeni bir bildirim!")
     
     login_url = f"{settings.FRONTEND_URL}/login"

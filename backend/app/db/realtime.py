@@ -24,7 +24,15 @@ async def create_notification(conn, user_id, sender_id, notification_type, conte
     )
     
     # Send email notification for important events
-    if notification_type in ["like", "match", "message", "visit"]:
+    if notification_type in [
+        "like",
+        "match",
+        "message",
+        "visit",
+        "event_invite",
+        "event_accepted",
+        "event_cancelled",
+    ]:
         try:
             # Get recipient email and username
             recipient = await conn.fetchrow("SELECT email, username FROM users WHERE id = $1", user_id)

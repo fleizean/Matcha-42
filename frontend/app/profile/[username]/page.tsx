@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { FiHeart, FiMessageSquare, FiMapPin, FiClock, FiStar, FiSlash, FiFlag, FiEdit, FiMoreHorizontal, FiLoader } from "react-icons/fi";
+import { FiHeart, FiMessageSquare, FiMapPin, FiClock, FiStar, FiSlash, FiFlag, FiEdit, FiMoreHorizontal, FiLoader, FiCalendar } from "react-icons/fi";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -80,6 +80,7 @@ interface ProfileData {
   isMatched: any;
   recentVisitors: any;
   id: string;
+  user_id?: string;
   username: string;
   first_name: string;
   last_name: string;
@@ -793,6 +794,20 @@ const ProfilePage = () => {
                           }`}
                       />
                     </button>
+
+                    {profile.isMatched && !isBlockedCheck() && (
+                      <Link
+                        href={
+                          profile.user_id
+                            ? `/events?user=${encodeURIComponent(profile.user_id)}`
+                            : `/events?username=${encodeURIComponent(profile.username)}`
+                        }
+                        className="p-3 rounded-full bg-[#3C3C3E] text-white hover:bg-[#4C4C4E]"
+                        title="Randevu Planla"
+                      >
+                        <FiCalendar className="w-6 h-6" />
+                      </Link>
+                    )}
 
                     <button
                       onClick={handleBlock}

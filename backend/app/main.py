@@ -13,6 +13,7 @@ from app.api.users import router as users_router
 from app.api.profiles import router as profiles_router
 from app.api.interactions import router as interactions_router
 from app.api.realtime import router as realtime_router
+from app.api.events import router as events_router
 from app.core.config import settings
 from app.core.migrations import run_migrations
 from contextlib import asynccontextmanager
@@ -89,3 +90,4 @@ app.include_router(users_router, prefix=f"{settings.API_V1_STR}/users", tags=["U
 app.include_router(profiles_router, prefix=f"{settings.API_V1_STR}/profiles", tags=["Profiles"])
 app.include_router(interactions_router, prefix=f"{settings.API_V1_STR}/interactions", tags=["Interactions"])
 app.include_router(realtime_router, prefix=f"{settings.API_V1_STR}/realtime", tags=["Real-time"])
+app.include_router(events_router, prefix=f"{settings.API_V1_STR}/events", tags=["Events"])

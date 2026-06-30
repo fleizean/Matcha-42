@@ -124,12 +124,41 @@ CREATE TABLE IF NOT EXISTS connections (
     UNIQUE (user1_id, user2_id)
 );
 
+-- Date events table
+CREATE TABLE IF NOT EXISTS date_events (
+    id SERIAL PRIMARY KEY,
+    connection_id INTEGER NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+    creator_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    meeting_type VARCHAR(50),
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ends_at TIMESTAMP WITH TIME ZONE,
+    location_name VARCHAR(255),
+    location_address TEXT,
+    latitude FLOAT,
+    longitude FLOAT,
+    creator_note TEXT,
+    recipient_note TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'completed', 'expired')),
+    cancelled_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+    cancelled_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP WITH TIME ZONE,
+    CHECK (creator_id <> recipient_id),
+    CHECK (ends_at IS NULL OR ends_at > starts_at),
+    CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
+    CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180))
+);
+
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     sender_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('like', 'unlike', 'match', 'unmatch', 'visit', 'message')),
+    type VARCHAR(20) NOT NULL CHECK (type IN ('like', 'unlike', 'match', 'unmatch', 'visit', 'message', 'event_invite', 'event_accepted', 'event_declined', 'event_cancelled', 'event_updated')),
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -165,6 +194,11 @@ CREATE INDEX idx_reports_reporter_id ON reports(reporter_id);
 CREATE INDEX idx_reports_reported_id ON reports(reported_id);
 CREATE INDEX idx_connections_user1_id ON connections(user1_id);
 CREATE INDEX idx_connections_user2_id ON connections(user2_id);
+CREATE INDEX idx_date_events_connection_id ON date_events(connection_id);
+CREATE INDEX idx_date_events_creator_id ON date_events(creator_id);
+CREATE INDEX idx_date_events_recipient_id ON date_events(recipient_id);
+CREATE INDEX idx_date_events_starts_at ON date_events(starts_at);
+CREATE INDEX idx_date_events_status ON date_events(status);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_sender_id ON notifications(sender_id);
 CREATE INDEX idx_messages_sender_id ON messages(sender_id);

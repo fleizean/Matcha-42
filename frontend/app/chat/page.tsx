@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { FiSend, FiMoreVertical, FiSearch, FiCircle, FiSlash, FiFlag, FiArrowLeft, FiLoader } from "react-icons/fi";
+import { FiSend, FiMoreVertical, FiSearch, FiCircle, FiSlash, FiFlag, FiArrowLeft, FiLoader, FiCalendar } from "react-icons/fi";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
@@ -752,6 +752,11 @@ const ChatPage = () => {
     setShowMenu(false);
   };
 
+  const handlePlanDate = () => {
+    if (!activeChat || blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them) return;
+    router.push(`/events?user=${activeChat}`);
+  };
+
   const confirmBlock = async () => {
     if (!session?.user?.accessToken || !activeChat) return;
 
@@ -1313,32 +1318,54 @@ const ChatPage = () => {
                       </div>
                     </div>
 
-                    <div className="relative" ref={menuRef}>
-                      <button
-                        className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-[#3C3C3E]"
-                        onClick={() => setShowMenu(!showMenu)}
-                      >
-                        <FiMoreVertical size={20} />
-                      </button>
-
-                      {showMenu && (
-                        <div className="absolute right-0 mt-2 w-48 bg-[#2C2C2E] rounded-lg shadow-lg py-2 z-50">
-                          <button
-                            onClick={handleBlock}
-                            className="w-full px-4 py-2 text-left text-white hover:bg-[#3C3C3E] flex items-center"
-                          >
-                            <FiSlash className="mr-2" />
-                            Engelle
-                          </button>
-                          <button
-                            onClick={handleReport}
-                            className="w-full px-4 py-2 text-left text-red-500 hover:bg-[#3C3C3E] flex items-center"
-                          >
-                            <FiFlag className="mr-2" />
-                            Raporla
-                          </button>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      {!(blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them) && (
+                        <button
+                          type="button"
+                          onClick={handlePlanDate}
+                          className="hidden sm:inline-flex items-center rounded-full bg-gradient-to-r from-[#8A2BE2] to-[#D63384] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                        >
+                          <FiCalendar className="mr-2" />
+                          Planla
+                        </button>
                       )}
+
+                      <div className="relative" ref={menuRef}>
+                        <button
+                          className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-[#3C3C3E]"
+                          onClick={() => setShowMenu(!showMenu)}
+                        >
+                          <FiMoreVertical size={20} />
+                        </button>
+
+                        {showMenu && (
+                          <div className="absolute right-0 mt-2 w-48 bg-[#2C2C2E] rounded-lg shadow-lg py-2 z-50">
+                            {!(blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them) && (
+                              <button
+                                onClick={handlePlanDate}
+                                className="w-full px-4 py-2 text-left text-white hover:bg-[#3C3C3E] flex items-center sm:hidden"
+                              >
+                                <FiCalendar className="mr-2" />
+                                Randevu Planla
+                              </button>
+                            )}
+                            <button
+                              onClick={handleBlock}
+                              className="w-full px-4 py-2 text-left text-white hover:bg-[#3C3C3E] flex items-center"
+                            >
+                              <FiSlash className="mr-2" />
+                              Engelle
+                            </button>
+                            <button
+                              onClick={handleReport}
+                              className="w-full px-4 py-2 text-left text-red-500 hover:bg-[#3C3C3E] flex items-center"
+                            >
+                              <FiFlag className="mr-2" />
+                              Raporla
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {blockStatus.is_blocked || blockStatus.blocked_by_me || blockStatus.blocked_by_them ? (

@@ -488,7 +488,7 @@ async def get_user_matches(
     
     # Get matches (mutual likes) with only the necessary fields
     matches = await conn.fetch("""
-    SELECT p.id, u.username, u.first_name, u.last_name, u.is_online, u.last_online
+    SELECT p.id, p.user_id, u.username, u.first_name, u.last_name, u.is_online, u.last_online
     FROM connections c
     JOIN users u ON (c.user1_id = $1 AND c.user2_id = u.id) OR (c.user2_id = $1 AND c.user1_id = u.id)
     JOIN profiles p ON u.id = p.user_id

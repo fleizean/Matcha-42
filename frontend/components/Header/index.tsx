@@ -8,13 +8,13 @@ import { IoIosSettings } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
 import ThemeToggler from "./ThemeToggler";
 import menuData from "./menuData";
-import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken, FaMapMarkedAlt } from "react-icons/fa";
+import { FaUserCircle, FaSignOutAlt, FaComment, FaBell, FaHeart, FaKissWinkHeart, FaEye, FaHeartBroken, FaMapMarkedAlt, FaCalendarAlt } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 interface NotificationType {
   id: number;
-  type: "like" | "unlike" | "match" | "unmatch" | "visit" | "message";
+  type: "like" | "unlike" | "match" | "unmatch" | "visit" | "message" | "event_invite" | "event_accepted" | "event_declined" | "event_cancelled" | "event_updated";
   message: string;
   time: string;
   sender_id?: string;
@@ -149,6 +149,21 @@ const Header = () => {
             case "visit":
               message = "Profilinizi ziyaret etti";
               break;
+            case "event_invite":
+              message = "Size bir randevu daveti gönderdi";
+              break;
+            case "event_accepted":
+              message = "Randevu davetinizi kabul etti";
+              break;
+            case "event_declined":
+              message = "Randevu davetinizi reddetti";
+              break;
+            case "event_cancelled":
+              message = "Randevuyu iptal etti";
+              break;
+            case "event_updated":
+              message = "Randevu güncellendi";
+              break;
             default:
               message = "Yeni bir bildirim";
           }
@@ -214,6 +229,21 @@ const Header = () => {
               break;
             case "visit":
               message = "Profilinizi ziyaret etti";
+              break;
+            case "event_invite":
+              message = "Size bir randevu daveti gönderdi";
+              break;
+            case "event_accepted":
+              message = "Randevu davetinizi kabul etti";
+              break;
+            case "event_declined":
+              message = "Randevu davetinizi reddetti";
+              break;
+            case "event_cancelled":
+              message = "Randevuyu iptal etti";
+              break;
+            case "event_updated":
+              message = "Randevu güncellendi";
               break;
             default:
               message = "Yeni bir bildirim";
@@ -362,6 +392,13 @@ const Header = () => {
         toast.custom(`${notification.message}`);
         router.push('/match'); // Redirect to match to refresh the matching view
         break;
+      case "event_invite":
+      case "event_accepted":
+      case "event_declined":
+      case "event_cancelled":
+      case "event_updated":
+        router.push('/events');
+        break;
       default:
         // For unknown notification types, navigate to match
         router.push('/match');
@@ -396,6 +433,24 @@ const Header = () => {
         return notification.sender_username
           ? `${notification.sender_username} artık eşleşmeleriniz arasında değil`
           : "Bir eşleşmeniz sona erdi";
+      case "event_invite":
+        return notification.sender_username
+          ? `${notification.sender_username} size bir randevu daveti gönderdi`
+          : "Yeni bir randevu davetiniz var";
+      case "event_accepted":
+        return notification.sender_username
+          ? `${notification.sender_username} randevu davetinizi kabul etti`
+          : "Randevu davetiniz kabul edildi";
+      case "event_declined":
+        return notification.sender_username
+          ? `${notification.sender_username} randevu davetinizi reddetti`
+          : "Randevu davetiniz reddedildi";
+      case "event_cancelled":
+        return notification.sender_username
+          ? `${notification.sender_username} randevuyu iptal etti`
+          : "Randevunuz iptal edildi";
+      case "event_updated":
+        return "Randevu bilgileriniz güncellendi";
       default:
         return notification.message || "Yeni bir bildiriminiz var";
     }
@@ -492,6 +547,12 @@ const getNotificationIcon = (type: string) => {
       return <FaComment className="text-green-400" />;
     case 'unmatch':
       return <FaHeartBroken className="text-red-400" />;
+    case 'event_invite':
+    case 'event_accepted':
+    case 'event_declined':
+    case 'event_cancelled':
+    case 'event_updated':
+      return <FaBell className="text-pink-500" />;
     default:
       return <FaBell className="text-gray-400" />;
   }
@@ -778,6 +839,14 @@ const getNotificationIcon = (type: string) => {
                           </Link>
 
                           <Link
+                            href="/events"
+                            className="flex items-center px-4 py-2 text-base text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
+                          >
+                            <FaCalendarAlt className="mr-2" />
+                            Randevular
+                          </Link>
+
+                          <Link
                             href="/match"
                             className="flex items-center px-4 py-2 text-base text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600"
                           >
@@ -893,6 +962,14 @@ const getNotificationIcon = (type: string) => {
                       >
                         <FaComment className="mr-2 text-pink-500 transition-all duration-300 group-hover:scale-110" />
                         Sohbet
+                      </Link>
+
+                      <Link
+                        href="/events"
+                        className="flex items-center text-base font-medium text-white/90 hover:text-[#D63384] transition-colors duration-300"
+                      >
+                        <FaCalendarAlt className="mr-2 text-pink-500 transition-all duration-300 group-hover:scale-110" />
+                        Randevular
                       </Link>
 
                       <Link

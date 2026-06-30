@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from app.db.profiles import update_fame_rating
 from app.db.realtime import create_notification
 from app.api.realtime import broadcast_notification, manager
+from app.db.events import cancel_future_events_for_connection
 
 async def like_profile(conn, liker_id, liked_id):
     """Like a profile"""
@@ -209,11 +210,20 @@ async def unlike_profile(conn, liker_id, liked_id, both_ways=False):
             """, liked_id, liker_id)
 
         # Update connection
-        await conn.execute("""
+        connection_id = await conn.fetchval("""
         UPDATE connections
         SET is_active = false, updated_at = $3
         WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
+        RETURNING id
         """, liker_user_id, liked_user_id, datetime.now(timezone.utc))
+        
+        if connection_id:
+            await cancel_future_events_for_connection(
+                conn,
+                connection_id,
+                cancelled_by=liker_user_id,
+                reason="Eşleşme sona erdi."
+            )
         
         # Create unmatch notifications for both users
         await create_notification(
